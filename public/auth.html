@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>NovelHub · Auth</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <header class="nav container">
+    <div class="brand">
+      <div class="logo"></div>
+      <h1>NovelHub</h1>
+    </div>
+    <div class="actions">
+      <a href="index.html">Home</a>
+      <button id="theme">Theme</button>
+    </div>
+  </header>
+
+  <main class="container" style="max-width:560px">
+    <div class="form">
+      <h2>Sign up</h2>
+      <label>Email</label>
+      <input id="su_email" type="email" placeholder="you@example.com" required>
+      <label>Password</label>
+      <input id="su_pass" type="password" placeholder="••••••••" required>
+      <button id="signup">Create account</button>
+      <p class="notice">You may need to confirm your email.</p>
+    </div>
+
+    <div class="form">
+      <h2>Log in</h2>
+      <label>Email</label>
+      <input id="li_email" type="email" placeholder="you@example.com" required>
+      <label>Password</label>
+      <input id="li_pass" type="password" placeholder="••••••••" required>
+      <button id="login">Log in</button>
+    </div>
+  </main>
+
+  <script type="module">
+    import { sb } from './js/supabaseClient.js';
+    import { Theme } from './js/utils.js';
+    Theme.load();
+    document.getElementById('theme').onclick = Theme.toggle;
+
+    document.getElementById('signup').onclick = async () => {
+      const email = document.getElementById('su_email').value;
+      const password = document.getElementById('su_pass').value;
+      const { error } = await sb.auth.signUp({ email, password });
+      alert(error ? error.message : 'Check your email to confirm.');
+    };
+
+    document.getElementById('login').onclick = async () => {
+      const email = document.getElementById('li_email').value;
+      const password = document.getElementById('li_pass').value;
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) return alert(error.message);
+      location.href = 'index.html';
+    };
+  </script>
+</body>
+</html>

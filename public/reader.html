@@ -1,0 +1,196 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>NovelHub · Reader</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <header class="nav container">
+    <div class="brand">
+      <div class="logo"></div>
+      <h1>NovelHub</h1>
+    </div>
+    <div class="actions">
+      <a href="index.html">Library</a>
+      <a href="#" id="prev">Prev</a>
+      <a href="#" id="next">Next</a>
+      <button id="theme">Theme</button>
+    </div>
+  </header>
+
+  <main class="container reader-wrap">
+    <aside class="toc">
+      <h4>Chapters</h4>
+      <div id="toc"></div>
+    </aside>
+
+    <section class="article">
+      <div class="controls">
+        <div class="left">
+          <span id="novelTitle" class="badge"></span>
+          <span id="chapterTitle" class="badge"></span>
+        </div>
+        <div class="right">
+          <button class="btn" id="fontMinus">A-</button>
+          <button class="btn" id="fontPlus">A+</button>
+          <button class="btn" id="bookmark">Bookmark</button>
+          <button class="btn" id="like">❤</button>
+        </div>
+      </div>
+
+      <article id="content"></article>
+      <p class="meta" id="meta"></p>
+
+      <div class="form" id="commentBox" style="margin-top:16px">
+        <h3>Comments</h3>
+        <div id="comments"></div>
+        <div id="commentFormWrap">
+          <label>Add a comment</label>
+          <textarea id="c_body" rows="3" placeholder="Write something…"></textarea>
+          <button class="btn" id="c_submit">Post</button>
+          <p class="notice">You need to be logged in to comment.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { sb } from './js/supabaseClient.js';
+    import { $, $$, html, throttle, Theme, getParam } from './js/utils.js';
+    Theme.load();
+    document.getElementById('theme').onclick = Theme.toggle;
+
+    let fontSize = Number(localStorage.getItem('fontSize') || 18);
+    const contentEl = $('#content');
+    const applyFont = () => { contentEl.style.fontSize = fontSize + 'px'; };
+    applyFont();
+    $('#fontPlus').onclick = () => { fontSize = Math.min(28, fontSize+1); localStorage.setItem('fontSize', fontSize); applyFont(); };
+    $('#fontMinus').onclick = () => { fontSize = Math.max(14, fontSize-1); localStorage.setItem('fontSize', fontSize); applyFont(); };
+
+    const slug = getParam('novel');
+    let chIndex = Number(getParam('ch') || '1');
+
+    // Load novel
+    const novel = (await sb.from('novels').select('id,title,slug').eq('slug', slug).single()).data;
+    $('#novelTitle').textContent = novel.title;
+
+    // Load all chapters for TOC
+    const chapters = (await sb.from('chapters').select('id,index_in_novel,title').eq('novel_id', novel.id).eq('is_published', true).order('index_in_novel', { ascending: true })).data || [];
+    const maxIndex = chapters.length ? chapters[chapters.length-1].index_in_novel : 1;
+
+    function renderTOC(){
+      const toc = $('#toc'); toc.innerHTML = '';
+      for (const c of chapters){
+        const a = document.createElement('a');
+        a.href = `reader.html?novel=${encodeURIComponent(slug)}&ch=${c.index_in_novel}`;
+        a.textContent = `${c.index_in_novel}. ${c.title}`;
+        if (c.index_in_novel === chIndex) a.classList.add('active');
+        toc.appendChild(a);
+      }
+    }
+    renderTOC();
+
+    function setNavLinks(){
+      const prev = Math.max(1, chIndex-1);
+      const next = Math.min(maxIndex, chIndex+1);
+      document.getElementById('prev').href = chIndex>1 ? `reader.html?novel=${encodeURIComponent(slug)}&ch=${prev}` : '#';
+      document.getElementById('next').href = chIndex<maxIndex ? `reader.html?novel=${encodeURIComponent(slug)}&ch=${next}` : '#';
+    }
+    setNavLinks();
+
+    async function loadChapter(){
+      const chap = (await sb.from('chapters').select('id,title,content,index_in_novel,published_at').eq('novel_id', novel.id).eq('index_in_novel', chIndex).single()).data;
+      $('#chapterTitle').textContent = chap.title;
+      $('#content').innerHTML = chap.content;
+      $('#meta').textContent = `Chapter ${chap.index_in_novel} · Published ${new Date(chap.published_at).toLocaleDateString()}`;
+      await restoreProgress();
+      await loadSocial(chap.id);
+      autoSave(chap.id);
+    }
+
+    // Save reading progress (throttled)
+    function getScrollPct(){
+      const h = document.documentElement;
+      if (h.scrollHeight <= h.clientHeight) return 100;
+      return Math.min(100, Math.round(100 * h.scrollTop / (h.scrollHeight - h.clientHeight)));
+    }
+    async function saveProgress(chapterIndex){
+      const user = (await sb.auth.getUser()).data.user; if (!user) return;
+      await sb.from('reading_progress').upsert({
+        user_id: user.id,
+        novel_id: novel.id,
+        last_chapter_index: chapterIndex,
+        last_scroll_pct: getScrollPct()
+      }, { onConflict: 'user_id,novel_id' });
+    }
+    function autoSave(chapterId){
+      const handler = throttle(() => saveProgress(chIndex), 800);
+      window.addEventListener('scroll', handler, { passive: true });
+      window.addEventListener('beforeunload', () => saveProgress(chIndex), { once:true });
+    }
+    async function restoreProgress(){
+      const user = (await sb.auth.getUser()).data.user; if (!user) return;
+      const prog = (await sb.from('reading_progress').select('*').eq('novel_id', novel.id).maybeSingle()).data;
+      if (prog?.last_chapter_index === chIndex && Number.isFinite(prog.last_scroll_pct)){
+        const h = document.documentElement;
+        const y = (prog.last_scroll_pct / 100) * (h.scrollHeight - h.clientHeight);
+        window.scrollTo({ top: y });
+      }
+    }
+
+    // Bookmarks & Likes
+    async function currentChapterRow(){
+      const row = (await sb.from('chapters').select('id').eq('novel_id', novel.id).eq('index_in_novel', chIndex).maybeSingle()).data;
+      return row?.id;
+    }
+    $('#bookmark').onclick = async () => {
+      const user = (await sb.auth.getUser()).data.user; if (!user) return alert('Log in first.');
+      const chapId = await currentChapterRow(); if (!chapId) return;
+      const { error } = await sb.from('bookmarks').insert({ user_id: user.id, chapter_id: chapId });
+      alert(error ? error.message : 'Bookmarked!');
+    };
+    $('#like').onclick = async () => {
+      const user = (await sb.auth.getUser()).data.user; if (!user) return alert('Log in first.');
+      const chapId = await currentChapterRow(); if (!chapId) return;
+      // toggle like
+      const exists = (await sb.from('likes').select('id').eq('chapter_id', chapId).limit(1)).data?.[0];
+      if (exists) {
+        await sb.from('likes').delete().eq('chapter_id', chapId).eq('user_id', user.id);
+      } else {
+        await sb.from('likes').insert({ user_id: user.id, chapter_id: chapId });
+      }
+      await loadSocial(chapId);
+    };
+
+    async function loadSocial(chapterId){
+      // likes count
+      const likes = (await sb.from('likes').select('id', { count: 'exact', head: true }).eq('chapter_id', chapterId)).count || 0;
+      $('#like').textContent = `❤ ${likes}`;
+      // comments
+      const comments = (await sb.from('comments').select('id,body,created_at').eq('chapter_id', chapterId).order('created_at', { ascending:false })).data || [];
+      const wrap = $('#comments'); wrap.innerHTML = '';
+      for (const c of comments){
+        const el = html`<div class="comment"><div>${c.body}</div><div class="meta">${new Date(c.created_at).toLocaleString()}</div></div>`;
+        wrap.append(el);
+      }
+      // comment form visibility
+      const user = (await sb.auth.getUser()).data.user;
+      $('#commentFormWrap').style.display = user ? '' : 'none';
+    }
+
+    $('#c_submit').onclick = async () => {
+      const user = (await sb.auth.getUser()).data.user; if (!user) return alert('Log in first.');
+      const body = $('#c_body').value.trim(); if (!body) return;
+      const chapId = await currentChapterRow(); if (!chapId) return;
+      const { error } = await sb.from('comments').insert({ user_id: user.id, chapter_id: chapId, body });
+      if (error) return alert(error.message);
+      $('#c_body').value = '';
+      await loadSocial(chapId);
+    };
+
+    await loadChapter();
+  </script>
+</body>
+</html>
