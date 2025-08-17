@@ -15,7 +15,7 @@
       <nav class="nav-right">
         <a class="btn ghost" href="index.html">Home</a>
         <a class="btn ghost" href="profile.html">Profile</a>
-        <a class="btn" id="logoutBtn" href="auth.html">Log out</a>
+        <a class="btn" id="logoutBtn" href="#">Log out</a>
         <button id="themeToggle" class="toggle">🌙</button>
       </nav>
     </div>
@@ -40,7 +40,21 @@
           </div>
         </div>
 
-        <div class="form row">
+        <div class="form three">
+          <div>
+            <div class="label">Genre</div>
+            <select id="genre" class="input">
+              <option>General</option>
+              <option>Fantasy</option>
+              <option>Romance</option>
+              <option>Action</option>
+              <option>Comedy</option>
+              <option>Horror</option>
+              <option>Adventure</option>
+              <option>Sci‑Fi</option>
+              <option>Drama</option>
+            </select>
+          </div>
           <div>
             <div class="label">Cover URL</div>
             <input id="cover_url" class="input" placeholder="or upload below">
