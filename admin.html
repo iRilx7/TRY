@@ -1,121 +1,64 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>NovelHub — Admin</title>
-  <link rel="stylesheet" href="styles.css"/>
-  <script defer src="js/supabaseClient.js"></script>
-  <script defer src="js/admin.js"></script>
-</head>
-<body>
-  <header class="header">
-    <div class="container nav">
-      <div class="brand"><span class="logo"></span> NovelHub</div>
-      <nav class="nav-right">
-        <a class="btn ghost" href="index.html">Home</a>
-        <a class="btn ghost" href="profile.html">Profile</a>
-        <a class="btn" id="logoutBtn" href="auth.html">Log out</a>
-        <button id="themeToggle" class="toggle">🌙</button>
-      </nav>
+
+<!doctype html><html><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NovelHub — Admin</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://unpkg.com/@supabase/supabase-js@2.44.4/dist/umd/supabase.js"></script>
+<script src="js/supabaseClient.js"></script><script src="js/common.js"></script>
+</head><body>
+<script>renderNav()</script>
+<div class="container">
+  <div id="gate" class="card"><h2>Checking admin access…</h2><p class="small">You must be logged in and present in <code>public.admins</code>.</p></div>
+
+  <div id="adminApp" class="grid" style="grid-template-columns:320px 1fr; display:none; gap:22px;">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3>All Novels</h3><button class="btn ghost" id="newNovel">+ New</button>
+      </div>
+      <div class="n-list" id="novelList"></div>
     </div>
-  </header>
 
-  <main class="container split">
-    <section class="card">
-      <h3 class="panel-title">Create / Edit Novel</h3>
-      <div class="form">
-        <div class="form three">
-          <div>
-            <div class="label">Title</div>
-            <input id="title" class="input" placeholder="Novel title">
-          </div>
-          <div>
-            <div class="label">Author</div>
-            <input id="author" class="input" placeholder="Author">
-          </div>
-          <div>
-            <div class="label">Slug (auto)</div>
-            <input id="slug" class="input" placeholder="auto-generated">
-          </div>
+    <div class="grid" style="grid-template-columns:1fr 1fr; gap:22px;">
+      <div class="card">
+        <h2>Novel</h2>
+        <input type="hidden" id="nid">
+        <label>Title</label><input class="input" id="title">
+        <label>Author</label><input class="input" id="author">
+        <label>Genres</label>
+        <div class="genre-bank" id="genreBank"></div>
+        <label>Custom genres (comma separated)</label><input class="input" id="genresExtra" placeholder="add custom tags">
+        <label>Cover URL <span class="small">or upload below</span></label><input class="input" id="cover_url">
+        <label>Description</label><textarea class="input" id="description"></textarea>
+        <div class="grid" style="grid-template-columns:1fr auto;align-items:end;">
+          <div><label>Upload cover</label><input type="file" id="cover_file"><div class="small">Uploads to covers/ bucket</div></div>
+          <div><button class="btn" id="uploadBtn">Upload → Fill URL</button></div>
         </div>
-
-        <div class="form row">
-          <div>
-            <div class="label">Cover URL</div>
-            <input id="cover_url" class="input" placeholder="or upload below">
-          </div>
-          <div>
-            <div class="label">Description</div>
-            <textarea id="description" placeholder="Short description (used on cards)"></textarea>
-          </div>
-        </div>
-
-        <div class="form row">
-          <div>
-            <div class="label">Cover upload</div>
-            <input type="file" id="coverFile" class="input" accept="image/*">
-            <div class="help">Uploads to <b>covers/</b> bucket</div>
-          </div>
-          <div style="align-self:end;display:flex;gap:10px">
-            <button id="uploadCoverBtn" class="btn">Upload → Fill URL</button>
-            <button id="saveNovelBtn" class="btn primary">Save Novel</button>
-          </div>
-        </div>
-
-        <div>
-          <div class="label">Preview</div>
-          <div id="preview" class="card" style="min-height:140px"></div>
+        <div class="center" style="margin-top:10px;">
+          <button class="btn ok" id="saveNovel">Save</button>
+          <button class="btn danger" id="deleteNovel">Delete</button>
         </div>
       </div>
-    </section>
 
-    <section class="card">
-      <h3 class="panel-title">Chapters for</h3>
-      <div class="form">
-        <div class="form three">
-          <div>
-            <div class="label">Novel slug</div>
-            <input id="chap_novel_slug" class="input" placeholder="novel-slug">
-          </div>
-          <div>
-            <div class="label">Chapter #</div>
-            <input id="chapter_number" class="input" placeholder="1">
-          </div>
-          <div>
-            <div class="label">Chapter title</div>
-            <input id="chapter_title" class="input" placeholder="Chapter title">
-          </div>
+      <div class="card">
+        <h2>Chapters</h2>
+        <div class="grid" style="grid-template-columns:120px 1fr; gap:10px;">
+          <div><label>#</label><input class="input" id="c_num" value="1"></div>
+          <div><label>Title</label><input class="input" id="c_title"></div>
         </div>
-
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button id="suggestBtn" class="btn">Suggest next #</button>
-          <button id="createChapterBtn" class="btn success">Create</button>
-          <button id="updateChapterBtn" class="btn">Update</button>
-          <button id="deleteChapterBtn" class="btn danger">Delete</button>
-          <button id="loadListBtn" class="btn ghost">Load chapters list</button>
+        <div class="grid" style="grid-template-columns:auto auto auto; gap:10px; margin-top:8px">
+          <button class="btn" id="suggestNext">Suggest next #</button>
+          <button class="btn ok" id="createCh">Create</button>
+          <button class="btn" id="updateCh">Update</button>
+          <button class="btn danger" id="deleteCh">Delete</button>
         </div>
-
-        <div>
-          <div class="label">Content (HTML allowed)</div>
-          <textarea id="chapter_content" style="min-height:260px"><p>Chapter content…</p></textarea>
-        </div>
-
-        <table class="table" id="chaptersTable">
-          <thead><tr><th>#</th><th>Title</th><th>Created</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
+        <label>Content (HTML allowed)</label><textarea class="input" id="c_content"><p>Chapter content…</p></textarea>
+        <div style="margin-top:12px"><button class="btn" id="loadList">Load chapters</button></div>
+        <table class="list" style="margin-top:8px"><thead><tr><th>#</th><th>Title</th><th>Created</th></tr></thead><tbody id="chTable"></tbody></table>
       </div>
-    </section>
-  </main>
+    </div>
+  </div>
 
-  <footer class="footer">© 2025 NovelHub · Admin</footer>
-
-  <script>
-    const body=document.body;const KEY='nh-theme';
-    const set=(t)=>{t==='light'?body.classList.add('light'):body.classList.remove('light');localStorage.setItem(KEY,t)}
-    set(localStorage.getItem(KEY)||'dark');
-    document.getElementById('themeToggle').onclick=()=>set(body.classList.contains('light')?'dark':'light');
-  </script>
-</body>
-</html>
+  <div class="footer">© 2025 NovelHub · Admin</div>
+</div>
+<script src="js/admin.js"></script>
+</body></html>
