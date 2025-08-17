@@ -1,8 +1,8 @@
 <!doctype html>
 <html><head>
-  <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>NovelHub — Reader</title>
-  <link rel="stylesheet" href="styles.css"/>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>NovelHub — Reader</title>
+<link rel="stylesheet" href="styles.css"/>
 </head><body>
 
 <header class="nav container">
@@ -23,12 +23,10 @@
   if (sess?.user) { authLink.style.display='none'; logout.style.display='inline-block'; }
   logout?.addEventListener('click', async () => { await sb.auth.signOut(); location.href='auth.html'; });
 </script>
+<div id="toasts"></div>
 
 <main class="container reader">
-  <aside class="toc">
-    <h3>Chapters</h3>
-    <div id="toc"></div>
-  </aside>
+  <aside class="toc"><h3>Chapters</h3><div id="toc"></div></aside>
   <section class="article">
     <div class="controls">
       <div><span id="novelTitle" class="badge"></span> <span id="chapterTitle" class="badge"></span></div>
@@ -43,11 +41,8 @@
     <div class="article" style="margin-top:16px">
       <h3>Comments</h3>
       <div id="comments"></div>
-      <div id="commentForm">
-        <textarea id="c_body" rows="3" placeholder="Write a comment…"></textarea>
-        <button class="btn" id="c_submit">Post</button>
-      </div>
-      <p class="meta">Comments and likes are per novel. Bookmarks/progress are per chapter.</p>
+      <textarea id="c_body" rows="3" placeholder="Write a comment…"></textarea><br>
+      <button class="btn primary" id="c_submit">Post</button>
     </div>
     <div class="controls" style="margin-top:12px">
       <a class="btn" id="prev">Prev</a>
