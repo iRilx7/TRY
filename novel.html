@@ -1,52 +1,12 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Novel — NovelHub</title>
-  <link rel="stylesheet" href="styles.css"/>
-  <script defer src="js/supabaseClient.js"></script>
-  <script defer src="js/novel.js"></script>
-</head>
-<body>
-  <header class="header">
-    <div class="container nav">
-      <div class="brand"><span class="logo"></span> NovelHub</div>
-      <nav class="nav-right">
-        <a class="btn ghost" href="index.html">Home</a>
-        <a class="btn ghost" href="profile.html">Profile</a>
-        <button id="themeToggle" class="toggle">🌙</button>
-      </nav>
-    </div>
-  </header>
 
-  <main class="container">
-    <section class="card">
-      <div class="grid" style="grid-template-columns:160px 1fr;gap:18px">
-        <img id="novelCover" class="n-cover" style="width:160px;height:210px;border-radius:16px">
-        <div>
-          <h1 id="novelTitle" style="margin:0 0 6px;font-size:34px"></h1>
-          <div class="muted" id="novelMeta"></div>
-          <div class="badges" id="novelBadges" style="margin-top:12px"></div>
-          <p id="novelDesc" style="margin-top:16px"></p>
-          <div style="margin-top:14px">
-            <a id="startReading" class="btn primary" href="#">Read</a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <h2 class="section-title">Chapters</h2>
-    <div id="chaptersList" class="card"></div>
-  </main>
-
-  <footer class="footer">© 2025 NovelHub</footer>
-
-  <script>
-    const body=document.body;const KEY='nh-theme';
-    const set=(t)=>{t==='light'?body.classList.add('light'):body.classList.remove('light');localStorage.setItem(KEY,t)}
-    set(localStorage.getItem(KEY)||'dark');
-    document.getElementById('themeToggle').onclick=()=>set(body.classList.contains('light')?'dark':'light');
-  </script>
-</body>
-</html>
+<!doctype html><html><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NovelHub — Novel</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://unpkg.com/@supabase/supabase-js@2.44.4/dist/umd/supabase.js"></script>
+<script src="js/supabaseClient.js"></script><script src="js/common.js"></script>
+</head><body>
+<script>renderNav()</script>
+<div class="container"><div id="content" class="card"></div><div class="footer">© 2025 NovelHub</div></div>
+<script src="js/novel.js"></script>
+</body></html>

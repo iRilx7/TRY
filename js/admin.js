@@ -1,160 +1,126 @@
-(async () => {
-  const sb = await supabase.promise;
-  const $ = (id) => document.getElementById(id);
-  const logoutBtn = $("logoutBtn");
 
-  // Gate admin
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) { location.href = "auth.html"; return; }
-  const { data: rows } = await sb.from("admins").select("user_id").eq("user_id", user.id).limit(1);
-  if (!rows || !rows.length) { alert("Admins only"); location.href = "index.html"; return; }
+const GENRES = ["Action","Adventure","Comedy","Drama","Fantasy","Harem","Historical","Horror","Isekai","Magic","Martial Arts","Mystery","Romance","Sci‑Fi","Slice of Life","Supernatural","Tragedy","Wuxia","Xianxia","General"];
 
-  logoutBtn.onclick = async (e) => { e.preventDefault(); await sb.auth.signOut(); location.href="auth.html"; };
+let selectedGenres = new Set();
+let currentNovel = null; // {id, ...}
 
-  // Inputs
-  const title = $("title");
-  const author = $("author");
-  const slug = $("slug");
-  const genre = $("genre");
-  const cover_url = $("cover_url");
-  const description = $("description");
-  const coverFile = $("coverFile");
-  const preview = $("preview");
+function renderGenreBank(){
+  const bank=el('#genreBank'); bank.innerHTML='';
+  GENRES.forEach(g=>{
+    const c=document.createElement('span'); c.className='chip'; c.textContent=g;
+    if(selectedGenres.has(g)) c.classList.add('active');
+    c.onclick=()=>{ selectedGenres.has(g)?selectedGenres.delete(g):selectedGenres.add(g); renderGenreBank(); };
+    bank.appendChild(c);
+  });
+}
 
-  const uploadCoverBtn = $("uploadCoverBtn");
-  const saveNovelBtn = $("saveNovelBtn");
+async function requireAdmin(){
+  const user = await getUser(); if(!user){ location.href='auth.html'; return; }
+  const { data, error } = await sb.from('admins').select('user_id').eq('user_id', user.id).maybeSingle();
+  if(error){ toast(error.message); return; }
+  if(!data){ el('#gate').innerHTML='<h2>Not an admin</h2><p class="small">Ask the owner to add your id into public.admins.</p>'; return; }
+  el('#gate').classList.add('hidden'); el('#adminApp').style.display='grid';
+  renderGenreBank(); loadNovels();
+}
+requireAdmin();
 
-  function slugify(s){ return (s||"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,""); }
+async function loadNovels(){
+  const {data,error}=await sb.from('novels').select('id,title,author,slug,created_at').order('created_at',{ascending:false});
+  if(error){ toast(error.message); return; }
+  const list=el('#novelList'); list.innerHTML='';
+  data.forEach(n=>{
+    const div=document.createElement('div'); div.className='n-item'; div.innerHTML=`<b>${n.title||'(untitled)'}</b><div class="small">${n.author||'Unknown'} • ${n.slug}</div>`;
+    div.onclick=()=>openNovel(n.id);
+    list.appendChild(div);
+  });
+}
 
-  title.oninput = () => { if (!slug.value || slug.value.startsWith("auto")) slug.value = slugify(title.value); };
-  [title, author, genre, description, cover_url].forEach(el => el.oninput = renderPreview);
+async function openNovel(id){
+  const {data:n,error}=await sb.from('novels').select('*').eq('id',id).maybeSingle();
+  if(error||!n){ toast('Novel missing'); return; }
+  currentNovel=n; selectedGenres = new Set(n.genres||[]); renderGenreBank();
+  el('#nid').value=n.id; el('#title').value=n.title||''; el('#author').value=n.author||''; el('#cover_url').value=n.cover_url||''; el('#description').value=n.description||''; el('#genresExtra').value='';
+  // chapters preview
+  el('#chTable').innerHTML='';
+}
 
-  function renderPreview(){
-    preview.innerHTML = `
-      <div class="n-card">
-        <img class="n-cover" src="${cover_url.value||'https://placehold.co/96x130?text=Cover'}">
-        <div>
-          <div class="title">${title.value||'Untitled'}</div>
-          <div class="muted">by ${author.value||'Unknown'}</div>
-          <div class="badges"><span class="badge">${genre.value||'General'}</span></div>
-          <div class="muted" style="margin-top:6px;font-size:13px">${(description.value||'').slice(0,120)}</div>
-        </div>
-      </div>`;
+el('#newNovel').onclick=()=>{ currentNovel=null; el('#nid').value=''; el('#title').value=''; el('#author').value=''; el('#cover_url').value=''; el('#description').value=''; selectedGenres=new Set(); renderGenreBank(); };
+
+// Upload cover
+el('#uploadBtn').onclick=async()=>{
+  const file=el('#cover_file').files[0]; if(!file) return toast('Choose a file');
+  const path=`covers/${Date.now()}-${file.name}`;
+  const {error}=await sb.storage.from('covers').upload(path, file, {upsert:true});
+  if(error) return toast(error.message);
+  const {data} = sb.storage.from('covers').getPublicUrl(path);
+  el('#cover_url').value=data.publicUrl; toast('Cover uploaded ✓',true);
+};
+
+el('#saveNovel').onclick=async()=>{
+  // merge custom genres
+  const custom=(el('#genresExtra').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const genres=Array.from(new Set([...selectedGenres, ...custom]));
+  const payload={ title:el('#title').value.trim(), author:el('#author').value.trim(), cover_url:el('#cover_url').value.trim(), description:el('#description').value.trim(), genres };
+  if(!payload.title) return toast('Title required');
+  // slug from title
+  payload.slug = slugify(payload.title);
+  if(el('#nid').value){
+    const id=parseInt(el('#nid').value,10);
+    const {error}=await sb.from('novels').update(payload).eq('id',id);
+    if(error) return toast(error.message);
+    toast('Saved ✓',true); loadNovels();
+  }else{
+    const {error}=await sb.from('novels').insert(payload);
+    if(error) return toast(error.message);
+    toast('Created ✓',true); loadNovels();
   }
-  renderPreview();
+};
 
-  uploadCoverBtn.onclick = async () => {
-    if (!coverFile.files[0]) return alert("Choose a file first");
-    const f = coverFile.files[0];
-    const path = `covers/${Date.now()}_${f.name}`;
-    const { data, error } = await sb.storage.from("covers").upload(path, f, { cacheControl: "3600", upsert: false });
-    if (error) return alert(error.message);
-    const { data: pub } = sb.storage.from("covers").getPublicUrl(path);
-    cover_url.value = pub.publicUrl;
-    renderPreview();
-  };
+el('#deleteNovel').onclick=async()=>{
+  const id=el('#nid').value; if(!id) return toast('Select a novel');
+  if(!confirm('Delete this novel and all its chapters?')) return;
+  const {error}=await sb.from('novels').delete().eq('id',id);
+  if(error) return toast(error.message);
+  toast('Deleted'); loadNovels(); el('#newNovel').click();
+};
 
-  saveNovelBtn.onclick = async () => {
-    const payload = {
-      slug: slugify(slug.value || title.value),
-      title: title.value.trim(),
-      author: author.value.trim(),
-      genre: genre.value || "General",
-      description: description.value,
-      cover_url: cover_url.value
-    };
-    if (!payload.title) return alert("Title is required");
-
-    // upsert by slug
-    const { data, error } = await sb.from("novels").upsert(payload, { onConflict: "slug" }).select("id").single();
-    if (error) return alert(error.message);
-    alert("Saved ✅");
-  };
-
-  // Chapters section
-  const c_slug = $("chap_novel_slug");
-  const c_num = $("chapter_number");
-  const c_title = $("chapter_title");
-  const c_content = $("chapter_content");
-  const tbl = $("chaptersTable").querySelector("tbody");
-
-  async function getNovelIdBySlug(s){
-    const { data, error } = await sb.from("novels").select("id,slug").eq("slug", s).single();
-    if (!data) throw new Error("Novel not found by slug");
-    return data.id;
-  }
-
-  $("suggestBtn").onclick = async () => {
-    try {
-      const nid = await getNovelIdBySlug(c_slug.value.trim());
-      const { data } = await sb.from("chapters").select("chapter_number").eq("novel_id", nid).order("chapter_number", {ascending:false}).limit(1);
-      const next = (data && data.length ? (data[0].chapter_number+1) : 1);
-      c_num.value = String(next);
-    } catch(e){ alert(e.message); }
-  };
-
-  $("createChapterBtn").onclick = async () => {
-    try {
-      const nid = await getNovelIdBySlug(c_slug.value.trim());
-      const payload = {
-        novel_id: nid,
-        title: c_title.value.trim() || `Chapter ${c_num.value}`,
-        content: c_content.value,
-        chapter_number: parseInt(c_num.value,10)||1
-      };
-      const { error } = await sb.from("chapters").insert(payload);
-      if (error) throw error;
-      alert("Chapter created ✅");
-      loadList();
-    } catch(e){ alert(e.message); }
-  };
-
-  $("updateChapterBtn").onclick = async () => {
-    try {
-      const nid = await getNovelIdBySlug(c_slug.value.trim());
-      const { error } = await sb.from("chapters")
-        .update({ title: c_title.value.trim(), content: c_content.value })
-        .eq("novel_id", nid).eq("chapter_number", parseInt(c_num.value,10)||1);
-      if (error) throw error;
-      alert("Updated ✅");
-      loadList();
-    } catch(e){ alert(e.message); }
-  };
-
-  $("deleteChapterBtn").onclick = async () => {
-    try {
-      const nid = await getNovelIdBySlug(c_slug.value.trim());
-      const { error } = await sb.from("chapters")
-        .delete()
-        .eq("novel_id", nid).eq("chapter_number", parseInt(c_num.value,10)||1);
-      if (error) throw error;
-      alert("Deleted ✅");
-      loadList();
-    } catch(e){ alert(e.message); }
-  };
-
-  async function loadList(){
-    try {
-      const nid = await getNovelIdBySlug(c_slug.value.trim());
-      const { data } = await sb.from("chapters").select("id,chapter_number,title,created_at").eq("novel_id", nid).order("chapter_number");
-      tbl.innerHTML = (data||[]).map(ch => 
-        `<tr>
-          <td>#${ch.chapter_number}</td>
-          <td>${ch.title}</td>
-          <td>${new Date(ch.created_at).toLocaleString()}</td>
-          <td><button class="btn ghost" data-num="${ch.chapter_number}">Load</button></td>
-        </tr>`).join("");
-      tbl.querySelectorAll("button[data-num]").forEach(btn => {
-        btn.onclick = async () => {
-          c_num.value = btn.getAttribute("data-num");
-          const nid2 = await getNovelIdBySlug(c_slug.value.trim());
-          const { data: one } = await sb.from("chapters")
-            .select("title,content").eq("novel_id", nid2).eq("chapter_number", parseInt(c_num.value,10)||1).single();
-          c_title.value = one?.title || "";
-          c_content.value = one?.content || "";
-        };
-      });
-    } catch(e){ alert(e.message); }
-  }
-  $("loadListBtn").onclick = loadList;
-})();
+// Chapters CRUD uses currentNovel
+async function findChapterId(num){
+  if(!currentNovel){ return null; }
+  const {data}=await sb.from('chapters').select('id').eq('novel_id',currentNovel.id).eq('chapter_number',num).maybeSingle();
+  return data?.id||null;
+}
+el('#suggestNext').onclick=async()=>{
+  if(!currentNovel) return toast('Pick a novel');
+  const {data}=await sb.from('chapters').select('chapter_number').eq('novel_id',currentNovel.id).order('chapter_number',{ascending:false}).limit(1);
+  el('#c_num').value=(data?.[0]?.chapter_number||0)+1;
+};
+el('#createCh').onclick=async()=>{
+  if(!currentNovel) return toast('Pick a novel');
+  const payload={ novel_id:currentNovel.id, chapter_number:parseInt(el('#c_num').value,10)||1, title:el('#c_title').value.trim(), content:el('#c_content').value };
+  const {error}=await sb.from('chapters').insert(payload); if(error) return toast(error.message);
+  toast('Chapter created ✓',true); el('#loadList').click();
+};
+el('#updateCh').onclick=async()=>{
+  if(!currentNovel) return toast('Pick a novel');
+  const num=parseInt(el('#c_num').value,10)||1; const id=await findChapterId(num); if(!id) return toast('Not found');
+  const payload={ title:el('#c_title').value.trim(), content:el('#c_content').value };
+  const {error}=await sb.from('chapters').update(payload).eq('id',id); if(error) return toast(error.message);
+  toast('Updated ✓',true); el('#loadList').click();
+};
+el('#deleteCh').onclick=async()=>{
+  if(!currentNovel) return toast('Pick a novel');
+  const num=parseInt(el('#c_num').value,10)||1; const id=await findChapterId(num); if(!id) return toast('Not found');
+  const {error}=await sb.from('chapters').delete().eq('id',id); if(error) return toast(error.message);
+  toast('Deleted'); el('#loadList').click();
+};
+el('#loadList').onclick=async()=>{
+  if(!currentNovel) return toast('Pick a novel');
+  const {data,error}=await sb.from('chapters').select('chapter_number,title,created_at').eq('novel_id',currentNovel.id).order('chapter_number');
+  if(error) return toast(error.message);
+  const tb=el('#chTable'); tb.innerHTML=''; data.forEach(r=>{
+    const tr=document.createElement('tr'); tr.innerHTML=`<td>${r.chapter_number}</td><td>${r.title}</td><td>${new Date(r.created_at).toLocaleString()}</td>`;
+    tr.onclick=()=>{ el('#c_num').value=r.chapter_number; el('#c_title').value=r.title; };
+    tb.appendChild(tr);
+  });
+};

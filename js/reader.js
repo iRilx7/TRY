@@ -1,43 +1,32 @@
-(async () => {
-  const sb = await supabase.promise;
-  const qs = new URLSearchParams(location.search);
-  const slug = qs.get("slug");
-  let chNo = parseInt(qs.get("ch") || "1", 10);
 
-  const $ = (id) => document.getElementById(id);
-  const toc = $("toc");
-  const content = $("chapterContent");
-  const titleEl = $("chapterTitle");
-  const meta = $("chapterMeta");
-  const prevBtn = $("prevBtn");
-  const nextBtn = $("nextBtn");
-  const novelLink = $("novelLink");
+async function main(){
+  const slug=q('slug'); let chNum=parseInt(q('ch'),10)||null;
+  const {data:novel}=await sb.from('novels').select('id,title').eq('slug',slug).maybeSingle();
+  if(!novel){ toast('Novel not found'); return; }
+  const {data:chapters}=await sb.from('chapters').select('id,chapter_number,title,created_at').eq('novel_id',novel.id).order('chapter_number');
+  if(!chapters?.length){ toast('No chapters'); return; }
+  if(!chNum) chNum=chapters[0].chapter_number;
+  const curr=chapters.find(c=>c.chapter_number===chNum) || chapters[0];
 
-  const nv = await sb.from("novels").select("id,title,slug").eq("slug", slug).single();
-  if (!nv.data){ content.textContent = "Novel not found"; return; }
-  novelLink.href = `novel.html?slug=${encodeURIComponent(slug)}`;
+  const toc=el('#toc'); toc.innerHTML='';
+  chapters.forEach(c=>{
+    const a=document.createElement('a'); a.href=`reader.html?slug=${encodeURIComponent(slug)}&ch=${c.chapter_number}`; a.textContent=`#${c.chapter_number} — ${c.title}`;
+    if(c.chapter_number===curr.chapter_number) a.style.background='#213050';
+    toc.appendChild(a);
+  });
 
-  const { data: chapters } = await sb.from("chapters").select("id,chapter_number,title,content,created_at").eq("novel_id", nv.data.id).order("chapter_number");
+  const {data:full}=await sb.from('chapters').select('title,content,created_at').eq('id',curr.id).maybeSingle();
+  el('#title').textContent = full ? `${curr.chapter_number}. ${full.title}` : `${curr.chapter_number}`;
+  el('#meta').textContent = `Chapter #${curr.chapter_number} • ${new Date(curr.created_at).toLocaleString()}`;
+  const ct=el('#content');
+  if(full?.content && /<[a-z][\s\S]*>/i.test(full.content)) ct.innerHTML=full.content; else ct.textContent=full?.content||'';
 
-  function renderTOC() {
-    toc.innerHTML = chapters.map(c => `<a href="reader.html?slug=${encodeURIComponent(slug)}&ch=${c.chapter_number}" class="${c.chapter_number===chNo?'active':''}">#${c.chapter_number} — ${c.title}</a>`).join("");
-  }
-  function renderChapter() {
-    const ch = chapters.find(c => c.chapter_number===chNo) || chapters[0];
-    if (!ch) { content.textContent = "No chapters yet"; return; }
-    chNo = ch.chapter_number;
-    titleEl.textContent = ch.title;
-    meta.textContent = `Chapter #${ch.chapter_number} • ${new Date(ch.created_at).toLocaleString()}`;
-    content.innerHTML = ch.content;
-    prevBtn.disabled = (chNo <= (chapters[0]?.chapter_number||1));
-    nextBtn.disabled = (chNo >= (chapters[chapters.length-1]?.chapter_number||1));
-  }
-  renderTOC(); renderChapter();
+  const ix=chapters.findIndex(c=>c.id===curr.id), prev=chapters[ix-1], next=chapters[ix+1];
+  el('#prevBtn').href=prev?`reader.html?slug=${encodeURIComponent(slug)}&ch=${prev.chapter_number}`:'#';
+  el('#nextBtn').href=next?`reader.html?slug=${encodeURIComponent(slug)}&ch=${next.chapter_number}`:'#';
 
-  prevBtn.onclick = () => { if (chNo>chapters[0].chapter_number) { chNo--; renderChapter(); renderTOC(); history.replaceState(null,"",`?slug=${encodeURIComponent(slug)}&ch=${chNo}`);} };
-  nextBtn.onclick = () => { if (chNo<chapters[chapters.length-1].chapter_number) { chNo++; renderChapter(); renderTOC(); history.replaceState(null,"",`?slug=${encodeURIComponent(slug)}&ch=${chNo}`);} };
-
-  // Font size
-  document.getElementById("smaller").onclick = () => { document.querySelector(".reader .content").style.fontSize="16px"; };
-  document.getElementById("bigger").onclick = () => { document.querySelector(".reader .content").style.fontSize="20px"; };
-})();
+  // font size controls
+  let size=18; el('#inc').onclick=()=>{ size=Math.min(28,size+1); ct.style.fontSize=size+'px'; };
+  el('#dec').onclick=()=>{ size=Math.max(14,size-1); ct.style.fontSize=size+'px'; };
+}
+main();

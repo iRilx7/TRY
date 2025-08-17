@@ -1,51 +1,22 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Read — NovelHub</title>
-  <link rel="stylesheet" href="styles.css"/>
-  <script defer src="js/supabaseClient.js"></script>
-  <script defer src="js/reader.js"></script>
-</head>
-<body>
-  <header class="header">
-    <div class="container nav">
-      <div class="brand"><span class="logo"></span> NovelHub</div>
-      <nav class="nav-right">
-        <a class="btn ghost" href="index.html">Home</a>
-        <a class="btn ghost" id="novelLink" href="novel.html">Novel</a>
-        <button id="themeToggle" class="toggle">🌙</button>
-      </nav>
+
+<!doctype html><html><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NovelHub — Reader</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://unpkg.com/@supabase/supabase-js@2.44.4/dist/umd/supabase.js"></script>
+<script src="js/supabaseClient.js"></script><script src="js/common.js"></script>
+</head><body>
+<script>renderNav()</script>
+<div class="container">
+  <div class="layout">
+    <div class="card toc"><h3>Chapters</h3><div id="toc"></div></div>
+    <div class="reader">
+      <div class="controls"><div><a class="btn" id="prevBtn">← Prev</a> <a class="btn" id="nextBtn">Next →</a></div><div><button class="btn" id="dec">A−</button><button class="btn" id="inc">A+</button></div></div>
+      <h1 id="title"></h1><div class="small" id="meta"></div>
+      <div id="content" class="reader-content"></div>
     </div>
-  </header>
-
-  <main class="container reader-wrap">
-    <aside class="card toc" id="toc"></aside>
-
-    <article class="card reader">
-      <h1 id="chapterTitle">Chapter title</h1>
-      <div class="muted" id="chapterMeta"></div>
-
-      <div style="margin:14px 0;display:flex;gap:10px">
-        <button id="prevBtn" class="btn">← Prev</button>
-        <button id="nextBtn" class="btn">Next →</button>
-        <span style="flex:1"></span>
-        <button id="smaller" class="btn ghost">A−</button>
-        <button id="bigger" class="btn ghost">A+</button>
-      </div>
-
-      <div id="chapterContent" class="content"></div>
-    </article>
-  </main>
-
-  <footer class="footer">Enjoy your reading ✨</footer>
-
-  <script>
-    const body=document.body;const KEY='nh-theme';
-    const set=(t)=>{t==='light'?body.classList.add('light'):body.classList.remove('light');localStorage.setItem(KEY,t)}
-    set(localStorage.getItem(KEY)||'dark');
-    document.getElementById('themeToggle').onclick=()=>set(body.classList.contains('light')?'dark':'light');
-  </script>
-</body>
-</html>
+  </div>
+  <div class="footer">© 2025 NovelHub</div>
+</div>
+<script src="js/reader.js"></script>
+</body></html>
