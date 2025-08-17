@@ -1,0 +1,1 @@
+Drop everything in your repo root. Open js/supabaseClient.js and paste your Project URL + anon key. Enable a public 'covers' bucket in Storage. Your existing SQL/RLS works.
