@@ -1,18 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Profile — NovelHub</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <script defer src="js/supabaseClient.js"></script>
+  <script defer src="js/profile.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div class="container nav">
+      <div class="brand"><span class="logo"></span> NovelHub</div>
+      <nav class="nav-right">
+        <a class="btn ghost" href="index.html">Home</a>
+        <a class="btn ghost" href="admin.html">Admin</a>
+        <button id="themeToggle" class="toggle">🌙</button>
+      </nav>
+    </div>
+  </header>
 
-<!doctype html><html><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NovelHub — Profile</title>
-<link rel="stylesheet" href="styles.css">
-<script src="https://unpkg.com/@supabase/supabase-js@2.44.4/dist/umd/supabase.js"></script>
-<script src="js/supabaseClient.js"></script><script src="js/common.js"></script>
-</head><body>
-<script>renderNav()</script>
-<div class="container">
-  <div class="card"><h2>Profile</h2><p id="who" class="small">Checking…</p><a class="btn" href="#" id="out">Log out</a></div>
-  <div class="footer">© 2025 NovelHub</div>
-</div>
-<script>
-getUser().then(u=>{ if(!u){ location.href='auth.html'; return; } el('#who').textContent=u.email||u.id; });
-el('#out').onclick=async(e)=>{e.preventDefault(); await sb.auth.signOut(); location.href='auth.html';};
-</script>
-</body></html>
+  <main class="container">
+    <section class="card">
+      <h2 class="panel-title">Your profile</h2>
+      <div id="profileArea" class="muted">Loading…</div>
+    </section>
+  </main>
+
+  <footer class="footer">© 2025 NovelHub</footer>
+
+  <script>
+    const body=document.body;const KEY='nh-theme';
+    const set=(t)=>{t==='light'?body.classList.add('light'):body.classList.remove('light');localStorage.setItem(KEY,t)}
+    set(localStorage.getItem(KEY)||'dark');
+    document.getElementById('themeToggle').onclick=()=>set(body.classList.contains('light')?'dark':'light');
+  </script>
+</body>
+</html>

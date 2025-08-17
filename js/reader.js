@@ -19,7 +19,33 @@ async function main(){
   el('#title').textContent = full ? `${curr.chapter_number}. ${full.title}` : `${curr.chapter_number}`;
   el('#meta').textContent = `Chapter #${curr.chapter_number} • ${new Date(curr.created_at).toLocaleString()}`;
   const ct=el('#content');
-  if(full?.content && /<[a-z][\s\S]*>/i.test(full.content)) ct.innerHTML=full.content; else ct.textContent=full?.content||'';
+  if(full?.content && /<[a-z][\s\S]*>/i.test(full.content)) ct.innerHTML=full.content;
+  // __WHITESPACE_FIX__
+  ;(function enforceWhiteSpace(){
+    const scope = ct;
+    if(!scope) return;
+    scope.style.whiteSpace = 'pre-wrap';
+    scope.style.wordBreak = 'break-word';
+    scope.setAttribute('dir','auto');
+    Array.from(scope.querySelectorAll('*')).forEach(n=>{
+      n.style.whiteSpace = 'pre-wrap';
+      n.style.wordBreak = 'break-word';
+    });
+  })(); // /*__WHITESPACE_FIX__*/
+ else ct.textContent=full?.content||'';
+  // __WHITESPACE_FIX__
+  ;(function enforceWhiteSpace(){
+    const scope = ct;
+    if(!scope) return;
+    scope.style.whiteSpace = 'pre-wrap';
+    scope.style.wordBreak = 'break-word';
+    scope.setAttribute('dir','auto');
+    Array.from(scope.querySelectorAll('*')).forEach(n=>{
+      n.style.whiteSpace = 'pre-wrap';
+      n.style.wordBreak = 'break-word';
+    });
+  })(); // /*__WHITESPACE_FIX__*/
+
 
   const ix=chapters.findIndex(c=>c.id===curr.id), prev=chapters[ix-1], next=chapters[ix+1];
   el('#prevBtn').href=prev?`reader.html?slug=${encodeURIComponent(slug)}&ch=${prev.chapter_number}`:'#';
