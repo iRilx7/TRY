@@ -1,30 +1,53 @@
-<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="styles.css"><title>Reader</title>
-
-<header class="nav"><div class="wrap container">
-  <div class="brand"><div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#79ffe1,#a0b3ff)"></div>
-  <strong style="margin-left:8px">NovelHub</strong></div>
-  <nav class="links">
+<!doctype html>
+<html><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>NovelHub — Reader</title>
+<link rel="stylesheet" href="styles.css"/>
+</head><body>
+<header class="nav container">
+  <div class="brand"><div class="logo"></div><h1>NovelHub</h1></div>
+  <nav class="actions">
     <a href="index.html">Home</a>
     <a href="profile.html">Profile</a>
     <a href="admin.html">Admin</a>
     <a href="auth.html" id="authLink">Log in</a>
-    <button id="logout" class="btn hidden">Log out</button>
+    <button id="logout" style="display:none">Log out</button>
+    <button id="theme" class="actions themeToggle">🌗</button>
   </nav>
-</div></header>
-<div class="toastbox" id="toasts" style="position:fixed;right:16px;bottom:16px"></div>
+</header>
 <script type="module">
-import {{ sb }} from './js/supabaseClient.js';
-const sess = (await sb.auth.getSession()).data.session;
-if (sess?.user) {{ document.getElementById('authLink').classList.add('hidden'); document.getElementById('logout').classList.remove('hidden'); }}
-document.getElementById('logout').onclick = async ()=>{{ await sb.auth.signOut(); location.href='auth.html'; }};
+  import { sb } from './js/supabaseClient.js';
+  const authLink = document.getElementById('authLink');
+  const logout = document.getElementById('logout');
+  const sess = (await sb.auth.getSession()).data.session;
+  if (sess?.user) { authLink.style.display='none'; logout.style.display='inline-block'; }
+  logout?.addEventListener('click', async () => { await sb.auth.signOut(); location.href='auth.html'; });
+  const themeBtn = document.getElementById('theme');
+  const LS='nh-theme';
+  const apply=(t)=>{document.body.classList.toggle('light',t==='light')};
+  apply(localStorage.getItem(LS)||'dark');
+  themeBtn.onclick=()=>{const t=document.body.classList.contains('light')?'dark':'light';localStorage.setItem(LS,t);apply(t)};
 </script>
-
-<main class="container" style="display:grid;grid-template-columns:260px 1fr;gap:16px">
-  <nav class="card" id="toc" style="max-height:70vh;overflow:auto"></nav>
-  <article class="card"><div style="display:flex;justify-content:space-between;align-items:center">
-    <div><span id="novelTitle" class="meta"></span> — <span id="chapterTitle"></span></div>
-    <div><button id="prev" class="btn">Prev</button><button id="next" class="btn">Next</button><button id="fontMinus" class="btn">A-</button><button id="fontPlus" class="btn">A+</button></div>
-  </div><div id="content" class="content"></div></article>
+<div id="toasts"></div>
+<main class="container reader">
+  <aside class="toc"><h3>Chapters</h3><div id="toc"></div></aside>
+  <section class="article">
+    <div class="controls">
+      <div><span id="novelTitle" class="badge"></span> <span id="chapterTitle" class="badge"></span></div>
+      <div>
+        <button class="btn" id="fontMinus">A-</button>
+        <button class="btn" id="fontPlus">A+</button>
+        <button class="btn" id="bookmark">Bookmark</button>
+      </div>
+    </div>
+    <article id="content"></article>
+    <div class="controls" style="margin-top:12px">
+      <a class="btn" id="prev">Prev</a>
+      <a class="btn" id="next">Next</a>
+    </div>
+  </section>
 </main>
 <script type="module" src="js/reader.js"></script>
-<footer class='container' style='color:#9fb0c3;text-align:center;padding:20px'>© <span id='y'></span> NovelHub Ultra</footer><script>document.getElementById('y').textContent=new Date().getFullYear()</script>
+<footer>© <span id="y"></span> NovelHub</footer>
+<script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+</body></html>

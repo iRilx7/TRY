@@ -1,7 +1,23 @@
+import { sb, toast } from './supabaseClient.js';
 
-import { $, html } from './utils.js';
-import { listNovels, likeCount } from './api.js';
-function card(n){ const img=n.cover_url||`https://picsum.photos/seed/${encodeURIComponent(n.slug)}/400/600`; return html`<article class="card"><img class="thumb" src="${img}"><div class="pad"><div class="meta">${n.author||''}</div><h3>${n.title}</h3><p class="meta">${(n.description||'').slice(0,120)}</p><div style="display:flex;justify-content:space-between"><a class="btn" href="novel.html?id=${n.id}">Open</a><span class="meta" data-like="${n.id}">❤ …</span></div></div></article>`; }
-async function hydrate(scope){ for(const el of scope.querySelectorAll('[data-like]')) el.textContent='❤ '+await likeCount(Number(el.dataset.like)); }
-async function render(q){ const list=await listNovels(q); const a=$('#all'); a.innerHTML=''; list.forEach(n=>a.append(card(n))); const l=list.slice(0,8); const latest=$('#latest'); latest.innerHTML=''; l.forEach(n=>latest.append(card(n))); await hydrate(a); await hydrate(latest); }
-$('#searchBtn').onclick=()=>render($('#q').value.trim()); render();
+async function load() {
+  const { data, error } = await sb.from('novels').select('id,slug,title,author,cover_url,created_at').order('created_at', { ascending:false }).limit(40);
+  if (error) { toast(error.message,'err'); return; }
+  const grid = document.getElementById('grid');
+  const latest = document.getElementById('latest');
+  const card = (n) => `<a class="card" href="novel.html?slug=${encodeURIComponent(n.slug)}">
+      <img src="${n.cover_url||''}" alt="">
+      <div class="pad"><div class="badge">${n.author||''}</div><h4>${n.title}</h4></div>
+    </a>`;
+  latest.innerHTML = data.slice(0,8).map(card).join('');
+  grid.innerHTML = data.map(card).join('');
+}
+load();
+
+document.getElementById('searchBtn').onclick = async () => {
+  const q = document.getElementById('q').value.trim();
+  const { data, error } = await sb.from('novels').select('slug,title,author,cover_url').ilike('title', `%${q}%`);
+  if (error) { toast(error.message,'err'); return; }
+  document.getElementById('grid').innerHTML = data.map(n=>`<a class="card" href="novel.html?slug=${encodeURIComponent(n.slug)}">
+      <img src="${n.cover_url||''}" alt=""><div class="pad"><div class="badge">${n.author||''}</div><h4>${n.title}</h4></div></a>`).join('');
+};

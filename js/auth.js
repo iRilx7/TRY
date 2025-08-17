@@ -1,4 +1,14 @@
-
-import sb from './supabaseClient.js'; import { $, } from './utils.js';
-document.getElementById('signup').onclick=async()=>{ const {error}=await sb.auth.signUp({email:su_email.value,password:su_pass.value}); alert(error?error.message:'Check your email (if required)'); };
-document.getElementById('login').onclick=async()=>{ const {error}=await sb.auth.signInWithPassword({email:li_email.value,password:li_pass.value}); if(error) alert(error.message); else location.href='admin.html'; };
+import { sb, toast } from './supabaseClient.js';
+document.getElementById('signup').onclick = async () => {
+  const email = document.getElementById('su_email').value.trim();
+  const password = document.getElementById('su_pass').value;
+  const { error } = await sb.auth.signUp({ email, password });
+  if (error) toast(error.message,'err'); else toast('Check your email to confirm.','ok');
+};
+document.getElementById('login').onclick = async () => {
+  const email = document.getElementById('li_email').value.trim();
+  const password = document.getElementById('li_pass').value;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { toast(error.message,'err'); return; }
+  toast('Logged in!','ok'); location.href='index.html';
+};

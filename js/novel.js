@@ -1,7 +1,18 @@
+import { sb, toast, params } from './supabaseClient.js';
 
-import { $, html } from './utils.js';
-import { getNovelById, chaptersForNovel, likeCount } from './api.js';
-const id=Number(new URLSearchParams(location.search).get('id')); let novel=null, chapters=[];
-function chItem(c){ const li=document.createElement('li'); li.innerHTML=`<a class="btn" href="reader.html?id=${id}&ch=${c.chapter_number}">#${c.chapter_number} ${c.title}</a>`; return li; }
-async function load(){ novel=await getNovelById(id); if(!novel) return; $('#title').textContent=novel.title; $('#author').textContent=novel.author||''; $('#desc').textContent=novel.description||''; $('#cover').src=novel.cover_url||`https://picsum.photos/seed/${encodeURIComponent(novel.slug)}/800/1200`; $('#likes').textContent='❤ '+await likeCount(id); chapters=await chaptersForNovel(id); const ul=$('#chapList'); ul.innerHTML=''; chapters.forEach(c=>ul.append(chItem(c))); $('#start').href=`reader.html?id=${id}&ch=${chapters[0]?.chapter_number||1}`; $('#continue').href=`reader.html?id=${id}&ch=${chapters[0]?.chapter_number||1}`; $('#filterCh').oninput=e=>{ const s=e.target.value.toLowerCase(); ul.querySelectorAll('li').forEach(li=>li.style.display=li.textContent.toLowerCase().includes(s)?'':'none'); }; }
+const slug = params.get('slug');
+if (!slug) location.href='index.html';
+
+async function load() {
+  const { data: n } = await sb.from('novels').select('id,slug,title,author,description,cover_url').eq('slug', slug).maybeSingle();
+  if (!n) { toast('Novel not found','err'); return; }
+  document.getElementById('details').innerHTML = `
+    <div style="display:flex;gap:16px;align-items:flex-start">
+      <img src="${n.cover_url||''}" style="width:160px;height:220px;object-fit:cover;border-radius:12px;border:1px solid var(--border)">
+      <div><h2>${n.title}</h2><div class="badge">${n.author||''}</div><p class="meta">${n.description||''}</p>
+      <a class="btn primary" href="reader.html?slug=${encodeURIComponent(slug)}">Open reader</a></div>
+    </div>`;
+  const { data: chs } = await sb.from('chapters').select('chapter_number,title').eq('novel_id', n.id).order('chapter_number');
+  document.getElementById('chapterList').innerHTML = chs.map(c=>`<a class="btn" href="reader.html?slug=${encodeURIComponent(slug)}&ch=${c.chapter_number}">#${c.chapter_number} — ${c.title}</a>`).join(' ');
+}
 load();

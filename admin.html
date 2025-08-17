@@ -1,44 +1,77 @@
-<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="styles.css"><title>Admin</title>
-
-<header class="nav"><div class="wrap container">
-  <div class="brand"><div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#79ffe1,#a0b3ff)"></div>
-  <strong style="margin-left:8px">NovelHub</strong></div>
-  <nav class="links">
+<!doctype html>
+<html><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>NovelHub — Admin</title>
+<link rel="stylesheet" href="styles.css"/>
+</head><body>
+<header class="nav container">
+  <div class="brand"><div class="logo"></div><h1>NovelHub</h1></div>
+  <nav class="actions">
     <a href="index.html">Home</a>
     <a href="profile.html">Profile</a>
     <a href="admin.html">Admin</a>
     <a href="auth.html" id="authLink">Log in</a>
-    <button id="logout" class="btn hidden">Log out</button>
+    <button id="logout" style="display:none">Log out</button>
+    <button id="theme" class="actions themeToggle">🌗</button>
   </nav>
-</div></header>
-<div class="toastbox" id="toasts" style="position:fixed;right:16px;bottom:16px"></div>
+</header>
 <script type="module">
-import {{ sb }} from './js/supabaseClient.js';
-const sess = (await sb.auth.getSession()).data.session;
-if (sess?.user) {{ document.getElementById('authLink').classList.add('hidden'); document.getElementById('logout').classList.remove('hidden'); }}
-document.getElementById('logout').onclick = async ()=>{{ await sb.auth.signOut(); location.href='auth.html'; }};
+  import { sb } from './js/supabaseClient.js';
+  const authLink = document.getElementById('authLink');
+  const logout = document.getElementById('logout');
+  const sess = (await sb.auth.getSession()).data.session;
+  if (sess?.user) { authLink.style.display='none'; logout.style.display='inline-block'; }
+  logout?.addEventListener('click', async () => { await sb.auth.signOut(); location.href='auth.html'; });
+  const themeBtn = document.getElementById('theme');
+  const LS='nh-theme';
+  const apply=(t)=>{document.body.classList.toggle('light',t==='light')};
+  apply(localStorage.getItem(LS)||'dark');
+  themeBtn.onclick=()=>{const t=document.body.classList.contains('light')?'dark':'light';localStorage.setItem(LS,t);apply(t)};
 </script>
-
+<div id="toasts"></div>
 <main class="container">
-  <div id="guard" class="card">Checking admin…</div>
-  <div id="cms" class="hidden">
-    <section class="card"><h3>Create / Edit Novel</h3>
-      <input id="n_title" placeholder="Title"><input id="n_author" placeholder="Author">
-      <textarea id="n_desc" rows="4" placeholder="Description"></textarea>
-      <input id="n_cover_url" placeholder="Cover URL">
-      <input type="file" id="cover"><button id="uploadCover" class="btn">Upload ➜ Fill URL</button>
-      <div style="display:flex;gap:8px"><button id="saveNovel" class="btn primary">Save</button><button id="deleteNovel" class="btn">Delete</button></div>
-      <input type="hidden" id="n_id">
-    </section>
-    <section class="card"><h3>Chapters</h3>
-      <input id="c_num" type="number" min="1" placeholder="#">
-      <input id="c_title" placeholder="Chapter title">
-      <textarea id="c_content" rows="10" placeholder="<p>Content…</p>"></textarea>
-      <div style="display:flex;gap:8px"><button id="suggestNum" class="btn">Suggest next #</button><button id="createChapter" class="btn">Create</button><button id="updateChapter" class="btn">Update</button><button id="deleteChapter" class="btn">Delete</button></div>
-      <table style="width:100%;margin-top:8px"><tbody id="chapTable"></tbody></table>
-    </section>
-    <section class="card"><h3>Novels</h3><input id="nv_q" placeholder="Search"><button id="nv_search" class="btn">Search</button><ul id="nv_list" class="list"></ul></section>
+  <p class="notice">Only accounts in <code>public.admins</code> can write. Upload covers to the <code>covers</code> bucket.</p>
+  <div id="adminGuard" class="form"><strong>Checking admin access…</strong></div>
+  <div id="cms" style="display:none">
+    <div class="form">
+      <h2>Create / Edit Novel</h2>
+      <div class="input-row">
+        <div><label>Title</label><input id="n_title" placeholder="Title"/></div>
+        <div><label>Author</label><input id="n_author" placeholder="Author"/></div>
+        <div><label>Slug (auto)</label><input id="n_slug" placeholder="slug" disabled/></div>
+        <div><label>Cover URL</label><input id="n_cover_url" placeholder="or upload below"/></div>
+      </div>
+      <label>Description</label><textarea id="n_desc" rows="4" placeholder="Short description"></textarea>
+      <div class="input-row" style="align-items:center">
+        <div><label>Preview</label><img id="coverPreview" style="width:100%;height:120px;object-fit:cover;border-radius:12px;border:1px solid var(--border);background:#0c0f15"/></div>
+        <div><label>Upload cover</label><input type="file" id="cover" accept="image/*"/></div>
+        <div style="align-self:end"><button class="btn" id="uploadCover">Upload → Fill URL</button></div>
+        <div style="align-self:end"><button class="btn primary" id="saveNovel">Save Novel</button></div>
+      </div>
+    </div>
+    <div class="form">
+      <h2>Chapters for <span id="slugTag" class="badge"></span></h2>
+      <div class="input-row">
+        <div><label>Novel slug</label><input id="c_slug" placeholder="novel-slug"/></div>
+        <div><label>Chapter #</label><input id="c_num" type="number" min="1" value="1"/></div>
+        <div><label>Chapter title</label><input id="c_title" placeholder="Chapter title"/></div>
+        <div style="align-self:end"><button class="btn" id="suggestNum">Suggest next #</button></div>
+      </div>
+      <label>Content (HTML or plain text)</label><textarea id="c_content" rows="14" placeholder="<p>Chapter content…</p>"></textarea>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn primary" id="createChapter">Create</button>
+        <button class="btn" id="updateChapter">Update</button>
+        <button class="btn danger" id="deleteChapter">Delete</button>
+        <button class="btn" id="loadChapters">Load list</button>
+        <a class="btn" id="viewNovel" href="#" target="_blank">Open novel page</a>
+      </div>
+      <div id="chapTableWrap" style="margin-top:12px;display:none">
+        <table class="table" id="chapTable"><thead><tr><th>#</th><th>Title</th><th>Created</th><th>Actions</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
   </div>
 </main>
 <script type="module" src="js/admin.js"></script>
-<footer class='container' style='color:#9fb0c3;text-align:center;padding:20px'>© <span id='y'></span> NovelHub Ultra</footer><script>document.getElementById('y').textContent=new Date().getFullYear()</script>
+<footer>© <span id="y"></span> NovelHub</footer>
+<script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+</body></html>

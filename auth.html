@@ -1,27 +1,50 @@
-<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="styles.css"><title>Auth</title>
-
-<header class="nav"><div class="wrap container">
-  <div class="brand"><div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#79ffe1,#a0b3ff)"></div>
-  <strong style="margin-left:8px">NovelHub</strong></div>
-  <nav class="links">
+<!doctype html>
+<html><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>NovelHub — Auth</title>
+<link rel="stylesheet" href="styles.css"/>
+</head><body>
+<header class="nav container">
+  <div class="brand"><div class="logo"></div><h1>NovelHub</h1></div>
+  <nav class="actions">
     <a href="index.html">Home</a>
     <a href="profile.html">Profile</a>
     <a href="admin.html">Admin</a>
     <a href="auth.html" id="authLink">Log in</a>
-    <button id="logout" class="btn hidden">Log out</button>
+    <button id="logout" style="display:none">Log out</button>
+    <button id="theme" class="actions themeToggle">🌗</button>
   </nav>
-</div></header>
-<div class="toastbox" id="toasts" style="position:fixed;right:16px;bottom:16px"></div>
+</header>
 <script type="module">
-import {{ sb }} from './js/supabaseClient.js';
-const sess = (await sb.auth.getSession()).data.session;
-if (sess?.user) {{ document.getElementById('authLink').classList.add('hidden'); document.getElementById('logout').classList.remove('hidden'); }}
-document.getElementById('logout').onclick = async ()=>{{ await sb.auth.signOut(); location.href='auth.html'; }};
+  import { sb } from './js/supabaseClient.js';
+  const authLink = document.getElementById('authLink');
+  const logout = document.getElementById('logout');
+  const sess = (await sb.auth.getSession()).data.session;
+  if (sess?.user) { authLink.style.display='none'; logout.style.display='inline-block'; }
+  logout?.addEventListener('click', async () => { await sb.auth.signOut(); location.href='auth.html'; });
+  const themeBtn = document.getElementById('theme');
+  const LS='nh-theme';
+  const apply=(t)=>{document.body.classList.toggle('light',t==='light')};
+  apply(localStorage.getItem(LS)||'dark');
+  themeBtn.onclick=()=>{const t=document.body.classList.contains('light')?'dark':'light';localStorage.setItem(LS,t);apply(t)};
 </script>
-
-<main class="container">
-  <div class="card"><h2>Create</h2><input id="su_email" placeholder="email"><input id="su_pass" placeholder="password" type="password"><button id="signup" class="btn primary">Sign up</button></div>
-  <div class="card"><h2>Login</h2><input id="li_email" placeholder="email"><input id="li_pass" placeholder="password" type="password"><button id="login" class="btn primary">Log in</button></div>
+<div id="toasts"></div>
+<main class="container" style="max-width:560px">
+  <div class="form">
+    <h2>Sign up</h2>
+    <label>Email</label><input id="su_email" type="email" placeholder="you@example.com">
+    <label>Password</label><input id="su_pass" type="password" placeholder="••••••••"><br>
+    <button class="btn primary" id="signup">Create account</button>
+    <p class="meta">Check your email if confirmation is required.</p>
+  </div>
+  <div class="form">
+    <h2>Log in</h2>
+    <label>Email</label><input id="li_email" type="email" placeholder="you@example.com">
+    <label>Password</label><input id="li_pass" type="password" placeholder="••••••••"><br>
+    <button class="btn primary" id="login">Log in</button>
+  </div>
 </main>
 <script type="module" src="js/auth.js"></script>
-<footer class='container' style='color:#9fb0c3;text-align:center;padding:20px'>© <span id='y'></span> NovelHub Ultra</footer><script>document.getElementById('y').textContent=new Date().getFullYear()</script>
+<footer>© <span id="y"></span> NovelHub</footer>
+<script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+</body></html>
