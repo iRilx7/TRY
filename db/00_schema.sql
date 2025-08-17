@@ -1,7 +1,4 @@
--- 00_schema.sql
--- Core tables for a web novel site (Postgres / Supabase)
-
--- Novels and Chapters
+-- 00_schema.sql (Pro)
 create table if not exists public.novels (
   id bigserial primary key,
   slug text unique not null,
@@ -9,15 +6,15 @@ create table if not exists public.novels (
   author text,
   description text,
   cover_url text,
+  tags text[] default '{}',
   is_published boolean default true,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
-
 create table if not exists public.chapters (
   id bigserial primary key,
   novel_id bigint not null references public.novels(id) on delete cascade,
-  index_in_novel int not null,              -- 1,2,3...
+  index_in_novel int not null,
   title text not null,
   content text not null,
   is_published boolean default true,
@@ -26,14 +23,10 @@ create table if not exists public.chapters (
   updated_at timestamptz default now(),
   unique (novel_id, index_in_novel)
 );
-
--- Admins (list of auth users allowed to write)
 create table if not exists public.admins (
   user_id uuid primary key references auth.users(id) on delete cascade,
   created_at timestamptz default now()
 );
-
--- Reading progress per user per novel
 create table if not exists public.reading_progress (
   user_id uuid not null,
   novel_id bigint not null references public.novels(id) on delete cascade,
@@ -42,8 +35,6 @@ create table if not exists public.reading_progress (
   updated_at timestamptz default now(),
   primary key (user_id, novel_id)
 );
-
--- Bookmarks per user per chapter
 create table if not exists public.bookmarks (
   id bigserial primary key,
   user_id uuid not null,
@@ -51,8 +42,6 @@ create table if not exists public.bookmarks (
   created_at timestamptz default now(),
   unique (user_id, chapter_id)
 );
-
--- Likes per user per chapter
 create table if not exists public.likes (
   id bigserial primary key,
   user_id uuid not null,
@@ -60,8 +49,6 @@ create table if not exists public.likes (
   created_at timestamptz default now(),
   unique (user_id, chapter_id)
 );
-
--- Comments per chapter
 create table if not exists public.comments (
   id bigserial primary key,
   user_id uuid not null,
@@ -69,19 +56,11 @@ create table if not exists public.comments (
   body text not null,
   created_at timestamptz default now()
 );
-
--- Timestamps update triggers (optional convenience)
 create or replace function public.touch_updated_at()
-returns trigger language plpgsql as $$
-begin
-  new.updated_at = now();
-  return new;
-end $$;
-
+returns trigger language plpgsql as $$ begin new.updated_at = now(); return new; end $$;
 drop trigger if exists trg_touch_novels on public.novels;
 create trigger trg_touch_novels before update on public.novels
 for each row execute function public.touch_updated_at();
-
 drop trigger if exists trg_touch_chapters on public.chapters;
 create trigger trg_touch_chapters before update on public.chapters
 for each row execute function public.touch_updated_at();

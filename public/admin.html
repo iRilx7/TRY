@@ -1,158 +1,73 @@
 <!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>NovelHub · Admin</title>
-  <link rel="stylesheet" href="styles.css"/>
-</head>
-<body>
-  <header class="nav container">
-    <div class="brand">
-      <div class="logo"></div>
-      <h1>NovelHub</h1>
-    </div>
-    <div class="actions">
-      <a href="index.html">Home</a>
-      <button id="logout" style="display:none">Log out</button>
-      <button id="theme">Theme</button>
-    </div>
-  </header>
+<html><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Admin · NovelHub Pro</title>
+<link rel="stylesheet" href="styles.css"/>
+</head><body>
+<header class="nav container"><div class="brand"><div class="logo"></div><h1>Admin</h1></div><div class="actions"><a href="index.html">Home</a></div></header>
+<main class="container">
+  <p class="meta">Works only when Supabase is configured and your user UUID is in <code>public.admins</code>. In DEMO mode, forms are disabled.</p>
+  <div class="article">
+    <h2>Create / Update Novel</h2>
+    <input id="n_slug" placeholder="slug"> <input id="n_title" placeholder="title"><br><br>
+    <input id="n_author" placeholder="author"> <input id="n_tags" placeholder="tags (comma separated)"><br><br>
+    <textarea id="n_desc" rows="4" placeholder="description"></textarea><br>
+    <input id="n_cover_url" placeholder="cover url"><br><br>
+    <button class="btn" id="save_novel">Save Novel</button>
+  </div>
+  <div class="article">
+    <h2>Add / Edit Chapter</h2>
+    <input id="c_slug" placeholder="novel slug"> <input id="c_index" type="number" value="1" min="1"><br><br>
+    <input id="c_title" placeholder="Chapter title"><br><br>
+    <textarea id="c_content" rows="10" placeholder="<p>HTML content...</p>"></textarea><br>
+    <button class="btn" id="create_chapter">Create</button>
+    <button class="btn" id="update_chapter">Update</button>
+    <button class="btn" id="delete_chapter">Delete</button>
+  </div>
+</main>
+<script type="module">
+import { sb, DEMO } from './js/supabaseClient.js';
+if (DEMO){ for (const id of ['save_novel','create_chapter','update_chapter','delete_chapter']) document.getElementById(id).onclick=()=>alert('Admin disabled in DEMO mode'); }
+else {
+  async function isAdmin(){
+    const u = (await sb.auth.getUser()).data.user; if(!u) return null;
+    const { data } = await sb.from('admins').select('user_id').eq('user_id', u.id).maybeSingle(); return data? u : null;
+  }
+  const user = await isAdmin(); if (!user) alert('Not admin or not logged in.');
 
-  <main class="container">
-    <p id="gate" class="notice">Checking admin access…</p>
-    <section id="content" style="display:none">
-      <div class="form">
-        <h2>Create / Update Novel</h2>
-        <label>Slug</label><input id="n_slug" placeholder="my-novel" required>
-        <label>Title</label><input id="n_title" placeholder="My Novel" required>
-        <label>Author</label><input id="n_author" placeholder="Author name">
-        <label>Description</label><textarea id="n_desc" rows="4" placeholder="Short description…"></textarea>
-        <label>Cover</label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="file" id="cover" accept="image/*">
-          <button class="btn" id="upload">Upload Cover</button>
-        </div>
-        <input id="n_cover_url" placeholder="Cover URL (auto-set after upload)">
-        <div style="margin-top:10px">
-          <button class="btn" id="save_novel">Save Novel</button>
-        </div>
-      </div>
-
-      <div class="form">
-        <h2>Add / Edit Chapter</h2>
-        <label>Novel Slug</label><input id="c_slug" placeholder="my-novel" required>
-        <label>Chapter Index (1..)</label><input id="c_index" type="number" min="1" value="1">
-        <label>Title</label><input id="c_title" placeholder="Chapter 1">
-        <label>Content (HTML allowed)</label><textarea id="c_content" rows="10" placeholder="<p>...</p>"></textarea>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-          <button class="btn" id="create_chapter">Create</button>
-          <button class="btn" id="update_chapter">Update</button>
-          <button class="btn danger" id="delete_chapter">Delete</button>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <script type="module">
-    import { sb } from './js/supabaseClient.js';
-    import { $, Theme } from './js/utils.js';
-    Theme.load();
-    document.getElementById('theme').onclick = Theme.toggle;
-
-    const session = (await sb.auth.getSession()).data.session;
-    const user = session?.user ?? null;
-    const gate = $('#gate'); const content = $('#content');
-    const logoutBtn = document.getElementById('logout');
-    logoutBtn.style.display = user ? '' : 'none';
-    logoutBtn.onclick = async () => { await sb.auth.signOut(); location.reload(); };
-
-    if (!user) {
-      gate.textContent = 'Not logged in. Please log in first on the Auth page.';
-    } else {
-      const { data: row } = await sb.from('admins').select('user_id').eq('user_id', user.id).maybeSingle();
-      if (!row) gate.textContent = 'You are not an admin.';
-      else { gate.style.display='none'; content.style.display=''; }
-    }
-
-    // Upload cover to Storage (bucket: covers)
-    $('#upload').onclick = async () => {
-      const file = document.getElementById('cover').files[0];
-      if (!file) return alert('Choose an image first.');
-      const slug = $('#n_slug').value.trim();
-      if (!slug) return alert('Enter slug first.');
-      const path = `${slug}/${Date.now()}_${file.name}`;
-      const { error } = await sb.storage.from('covers').upload(path, file, { upsert: true, cacheControl: '3600' });
-      if (error) return alert(error.message);
-      const { data } = sb.storage.from('covers').getPublicUrl(path);
-      $('#n_cover_url').value = data.publicUrl;
-      alert('Cover uploaded.');
+  document.getElementById('save_novel').onclick = async ()=>{
+    const payload = {
+      slug: n_slug.value.trim(), title: n_title.value.trim(), author: n_author.value.trim()||null,
+      description: n_desc.value.trim()||null, cover_url: n_cover_url.value.trim()||null,
+      tags: n_tags.value.split(',').map(x=>x.trim()).filter(Boolean)
     };
+    const existed = (await sb.from('novels').select('id').eq('slug', payload.slug).maybeSingle()).data;
+    let error; if (existed) ({ error } = await sb.from('novels').update(payload).eq('id',existed.id));
+    else ({ error } = await sb.from('novels').insert(payload));
+    alert(error? error.message : 'Saved.');
+  };
 
-    // Save (upsert) novel
-    $('#save_novel').onclick = async () => {
-      const payload = {
-        slug: $('#n_slug').value.trim(),
-        title: $('#n_title').value.trim(),
-        author: $('#n_author').value.trim() || null,
-        description: $('#n_desc').value.trim() || null,
-        cover_url: $('#n_cover_url').value.trim() || null,
-        is_published: true
-      };
-      if (!payload.slug || !payload.title) return alert('Slug and title required.');
+  async function getNovelId(slug){ const { data } = await sb.from('novels').select('id').eq('slug', slug).single(); return data.id; }
 
-      const existed = (await sb.from('novels').select('id').eq('slug', payload.slug).maybeSingle()).data;
-      let error;
-      if (existed) ({ error } = await sb.from('novels').update(payload).eq('id', existed.id));
-      else ({ error } = await sb.from('novels').insert(payload));
-      alert(error ? error.message : 'Novel saved.');
-    };
-
-    async function getNovelBySlug(slug){
-      const { data, error } = await sb.from('novels').select('id').eq('slug', slug).maybeSingle();
-      if (error || !data) return null;
-      return data;
-    }
-
-    // Chapter create/update/delete
-    $('#create_chapter').onclick = async () => {
-      const slug = $('#c_slug').value.trim();
-      const nv = await getNovelBySlug(slug); if (!nv) return alert('Novel not found.');
-      const payload = {
-        novel_id: nv.id,
-        index_in_novel: Number($('#c_index').value),
-        title: $('#c_title').value.trim() || `Chapter ${Number($('#c_index').value)}`,
-        content: $('#c_content').value.trim(),
-        is_published: true
-      };
-      const { error } = await sb.from('chapters').insert(payload);
-      alert(error ? error.message : 'Chapter created.');
-    };
-
-    $('#update_chapter').onclick = async () => {
-      const slug = $('#c_slug').value.trim();
-      const nv = await getNovelBySlug(slug); if (!nv) return alert('Novel not found.');
-      const idx = Number($('#c_index').value);
-      const { data: chap } = await sb.from('chapters').select('id').eq('novel_id', nv.id).eq('index_in_novel', idx).maybeSingle();
-      if (!chap) return alert('Chapter not found.');
-      const payload = {
-        title: $('#c_title').value.trim(),
-        content: $('#c_content').value.trim()
-      };
-      const { error } = await sb.from('chapters').update(payload).eq('id', chap.id);
-      alert(error ? error.message : 'Chapter updated.');
-    };
-
-    $('#delete_chapter').onclick = async () => {
-      if (!confirm('Delete this chapter?')) return;
-      const slug = $('#c_slug').value.trim();
-      const nv = await getNovelBySlug(slug); if (!nv) return alert('Novel not found.');
-      const idx = Number($('#c_index').value);
-      const { data: chap } = await sb.from('chapters').select('id').eq('novel_id', nv.id).eq('index_in_novel', idx).maybeSingle();
-      if (!chap) return alert('Chapter not found.');
-      const { error } = await sb.from('chapters').delete().eq('id', chap.id);
-      alert(error ? error.message : 'Chapter deleted.');
-    };
-  </script>
-</body>
-</html>
+  document.getElementById('create_chapter').onclick = async ()=>{
+    const nv = await getNovelId(c_slug.value.trim());
+    const payload = { novel_id:nv, index_in_novel:Number(c_index.value), title:c_title.value.trim()||`Chapter ${c_index.value}`, content:c_content.value.trim(), is_published:true };
+    const { error } = await sb.from('chapters').insert(payload); alert(error? error.message : 'Chapter created.');
+  };
+  document.getElementById('update_chapter').onclick = async ()=>{
+    const nv = await getNovelId(c_slug.value.trim());
+    const row = (await sb.from('chapters').select('id').eq('novel_id',nv).eq('index_in_novel',Number(c_index.value)).maybeSingle()).data;
+    if (!row) return alert('Not found');
+    const { error } = await sb.from('chapters').update({ title:c_title.value.trim(), content:c_content.value.trim() }).eq('id', row.id);
+    alert(error? error.message : 'Updated.');
+  };
+  document.getElementById('delete_chapter').onclick = async ()=>{
+    const nv = await getNovelId(c_slug.value.trim());
+    const row = (await sb.from('chapters').select('id').eq('novel_id',nv).eq('index_in_novel',Number(c_index.value)).maybeSingle()).data;
+    if (!row) return alert('Not found');
+    const { error } = await sb.from('chapters').delete().eq('id',row.id);
+    alert(error? error.message : 'Deleted.');
+  };
+}
+</script>
+</body></html>

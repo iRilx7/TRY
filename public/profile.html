@@ -1,0 +1,30 @@
+<!doctype html>
+<html><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Profile · NovelHub Pro</title>
+<link rel="stylesheet" href="styles.css"/>
+</head><body>
+<header class="nav container"><div class="brand"><div class="logo"></div><h1>Profile</h1></div><div class="actions"><a href="index.html">Home</a></div></header>
+<main class="container">
+  <div class="article">
+    <h3>Your Bookmarks</h3>
+    <div id="bookmarks" class="grid"></div>
+    <p class="meta">Bookmarks & history show when Supabase is configured and you are logged in.</p>
+  </div>
+</main>
+<script type="module">
+import { sb, DEMO } from './js/supabaseClient.js';
+import { $, html } from './js/utils.js';
+if (DEMO){ document.getElementById('bookmarks').innerHTML = '<p class="meta">Demo mode - no data.</p>'; }
+else {
+  const u = (await sb.auth.getUser()).data.user;
+  if (!u) { location.href = 'auth.html'; }
+  const { data: rows } = await sb.from('bookmarks').select('chapter_id, chapters(novel_id,index_in_novel,title), chapters:chapters(novels(slug,title,cover_url))').eq('user_id', u.id).limit(100);
+  const box = $('#bookmarks'); box.innerHTML='';
+  (rows||[]).forEach(r=>{
+    const nv = r.chapters.novels;
+    box.append(html`<article class="card"><img src="${nv.cover_url||'https://picsum.photos/seed/'+encodeURIComponent(nv.slug)+'/400/600'}"><div class="pad"><h3>${nv.title}</h3><p class="meta">Chapter ${r.chapters.index_in_novel}: ${r.chapters.title}</p><p style="margin-top:8px"><a class="btn" href="reader.html?novel=${encodeURIComponent(nv.slug)}&ch=${r.chapters.index_in_novel}">Open →</a></p></div></article>`);
+  });
+}
+</script>
+</body></html>

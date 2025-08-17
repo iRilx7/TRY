@@ -1,0 +1,47 @@
+{
+  "novels": [
+    {
+      "slug": "sky-chronicles",
+      "title": "Sky Chronicles",
+      "author": "A. Noor",
+      "description": "A courier discovers floating islands hiding ancient tech.",
+      "cover_url": "https://picsum.photos/seed/sky/400/600",
+      "tags": [
+        "Sci-Fi",
+        "Adventure"
+      ]
+    },
+    {
+      "slug": "desert-rose",
+      "title": "Desert Rose",
+      "author": "Kenzi",
+      "description": "A healer crosses kingdoms to undo a curse.",
+      "cover_url": "https://picsum.photos/seed/rose/400/600",
+      "tags": [
+        "Fantasy",
+        "Romance"
+      ]
+    }
+  ],
+  "chapters": {
+    "sky-chronicles": [
+      {
+        "index": 1,
+        "title": "Cloudport",
+        "content": "<p>The docks hung in the mist...</p>"
+      },
+      {
+        "index": 2,
+        "title": "Contraband",
+        "content": "<p>He shouldn’t have opened the crate...</p>"
+      }
+    ],
+    "desert-rose": [
+      {
+        "index": 1,
+        "title": "Footprints",
+        "content": "<p>Sand sang under the caravan wheels...</p>"
+      }
+    ]
+  }
+}

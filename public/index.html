@@ -1,102 +1,78 @@
 <!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>NovelHub · Library</title>
-  <link rel="stylesheet" href="styles.css"/>
-  <meta name="description" content="Read web novels with progress sync, bookmarks, comments.">
-</head>
-<body>
-  <header class="nav container">
-    <div class="brand">
-      <div class="logo"></div>
-      <h1>NovelHub</h1>
+<html><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>NovelHub Pro · Home</title>
+<link rel="stylesheet" href="styles.css"/>
+</head><body>
+<header class="nav container">
+  <div class="brand"><div class="logo"></div><h1>NovelHub Pro</h1></div>
+  <div class="actions">
+    <a href="index.html">Home</a>
+    <a href="explore.html">Explore</a>
+    <a href="profile.html" id="profileLink" style="display:none">Profile</a>
+    <a href="admin.html">Admin</a>
+    <a href="auth.html" id="authLink">Log in</a>
+    <button id="logout" style="display:none">Log out</button>
+  </div>
+</header>
+
+<main class="container">
+  <section class="hero">
+    <div class="big">
+      <h2>Read smarter. Anywhere.</h2>
+      <p>Sync progress, bookmark favorites, and join the discussion.</p>
+      <div class="searchbar" style="margin-top:12px">
+        <input id="q" placeholder="Search novels..."/><button id="searchBtn">Search</button>
+      </div>
+      <div class="tags" id="tags"></div>
     </div>
-    <div class="actions">
-      <a href="auth.html" id="authLink">Log in</a>
-      <button id="logout" style="display:none">Log out</button>
-      <a href="admin.html">Admin</a>
-      <button id="theme">Theme</button>
+    <div>
+      <div class="section"><h3>Trending</h3></div>
+      <div class="grid" id="trending"></div>
     </div>
-  </header>
+  </section>
 
-  <main class="container">
-    <div class="searchbar">
-      <input id="q" placeholder="Search novels by title or author..."/>
-      <button id="searchBtn">Search</button>
+  <div class="section"><h3>Latest updates</h3><a href="explore.html" class="tag">See all →</a></div>
+  <div class="grid" id="latest"></div>
+</main>
+
+<footer>© <span id="y"></span> NovelHub Pro</footer>
+
+<script type="module">
+import { api } from './js/api.js';
+import { $, html } from './js/utils.js';
+
+document.getElementById('y').textContent = new Date().getFullYear();
+
+const session = await api.getSession();
+document.getElementById('authLink').style.display = session?.user ? 'none':'';
+document.getElementById('logout').style.display = session?.user ? '':'none';
+document.getElementById('profileLink').style.display = session?.user ? '':'';
+document.getElementById('logout').onclick = async ()=>{ await api.signOut(); location.reload(); };
+
+const novels = await api.listNovels();
+const tags = new Set(); novels.forEach(n => (n.tags||[]).forEach(t=>tags.add(t)));
+$('#tags').append(html`${[...tags].slice(0,9).map(t=>`<a class="tag" href="explore.html?tag=${encodeURIComponent(t)}">${t}</a>`).join('')}`);
+
+function card(n){
+  return html`<article class="card">
+    <img src="${n.cover_url||'https://picsum.photos/seed/'+encodeURIComponent(n.slug)+'/400/600'}" alt="${n.title} cover">
+    <div class="pad">
+      <span class="badge">${n.author||'Unknown'}</span>
+      <h3>${n.title}</h3>
+      <p class="meta">${(n.description||'').slice(0,120)}</p>
+      <p style="margin-top:8px"><a class="btn" href="reader.html?novel=${encodeURIComponent(n.slug)}&ch=1">Read →</a></p>
     </div>
+  </article>`;
+}
 
-    <section id="continue"></section>
-    <div id="grid" class="grid"></div>
-  </main>
+const latest = $('#latest'); novels.slice(0,8).forEach(n=>latest.append(card(n)));
+const trending = $('#trending'); novels.slice(0,6).forEach(n=>trending.append(card(n)));
 
-  <footer>© <span id="y"></span> NovelHub</footer>
-
-  <script type="module">
-    import { sb } from './js/supabaseClient.js';
-    import { $, html, timeAgo, Theme } from './js/utils.js';
-
-    Theme.load();
-    document.getElementById('theme').onclick = Theme.toggle;
-
-    const year = new Date().getFullYear();
-    document.getElementById('y').textContent = String(year);
-
-    // Auth UI
-    const session = (await sb.auth.getSession()).data.session;
-    const user = session?.user ?? null;
-    document.getElementById('authLink').style.display = user ? 'none' : '';
-    document.getElementById('logout').style.display = user ? '' : 'none';
-    document.getElementById('logout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
-
-    // Load novels
-    let novels = (await sb.from('novels').select('*').eq('is_published', true).order('updated_at', { ascending:false })).data ?? [];
-
-    function render(list){
-      const grid = $('#grid'); grid.innerHTML = '';
-      for (const n of list){
-        const card = html`
-          <article class="card">
-            <img src="${n.cover_url || 'https://picsum.photos/seed/'+encodeURIComponent(n.slug)+'/400/600'}" alt="${n.title} cover">
-            <div class="pad">
-              <span class="badge">${n.author || 'Unknown'}</span>
-              <h3>${n.title}</h3>
-              <p>${(n.description||'').slice(0,160)}</p>
-              <p class="meta">Updated ${n.updated_at ? timeAgo(n.updated_at) : ''}</p>
-              <p style="margin-top:8px"><a class="btn" href="reader.html?novel=${encodeURIComponent(n.slug)}&ch=1">Start reading →</a></p>
-            </div>
-          </article>`;
-        grid.append(card);
-      }
-    }
-    render(novels);
-
-    // Search
-    document.getElementById('searchBtn').onclick = () => {
-      const q = ($('#q').value || '').toLowerCase();
-      if (!q) { render(novels); return; }
-      const flt = novels.filter(n => (n.title||'').toLowerCase().includes(q) || (n.author||'').toLowerCase().includes(q));
-      render(flt);
-    };
-
-    // Continue reading (first match)
-    if (user) {
-      for (const n of novels) {
-        const prog = (await sb.from('reading_progress').select('last_chapter_index').eq('novel_id', n.id).maybeSingle()).data;
-        if (prog?.last_chapter_index) {
-          const el = $('#continue');
-          el.innerHTML = '';
-          el.append(html`
-            <div class="form">
-              <p>Continue <strong>${n.title}</strong> at chapter ${prog.last_chapter_index}</p>
-              <a class="btn" href="reader.html?novel=${encodeURIComponent(n.slug)}&ch=${prog.last_chapter_index}">Resume</a>
-            </div>
-          `);
-          break;
-        }
-      }
-    }
-  </script>
-</body>
-</html>
+document.getElementById('searchBtn').onclick = ()=>{
+  const q = ($('#q').value||'').toLowerCase();
+  const list = novels.filter(n => (n.title||'').toLowerCase().includes(q) || (n.author||'').toLowerCase().includes(q));
+  latest.innerHTML=''; list.forEach(n=>latest.append(card(n)));
+};
+</script>
+</body></html>
