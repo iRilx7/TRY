@@ -1,16 +1,32 @@
 <!doctype html>
 <html><head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Reader · NovelHub Pro</title>
-<link rel="stylesheet" href="styles.css"/>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>NovelHub — Reader</title>
+  <link rel="stylesheet" href="styles.css"/>
 </head><body>
+
 <header class="nav container">
-  <div class="brand"><div class="logo"></div><h1>Reader</h1></div>
-  <div class="actions"><a href="index.html">Home</a><a href="#" id="prev">Prev</a><a href="#" id="next">Next</a></div>
+  <div class="brand"><div class="logo"></div><h1>NovelHub</h1></div>
+  <nav class="actions">
+    <a href="index.html">Home</a>
+    <a href="profile.html">Profile</a>
+    <a href="admin.html">Admin</a>
+    <a href="auth.html" id="authLink">Log in</a>
+    <button id="logout" style="display:none">Log out</button>
+  </nav>
 </header>
+<script type="module">
+  import { sb } from './js/supabaseClient.js';
+  const authLink = document.getElementById('authLink');
+  const logout = document.getElementById('logout');
+  const sess = (await sb.auth.getSession()).data.session;
+  if (sess?.user) { authLink.style.display='none'; logout.style.display='inline-block'; }
+  logout?.addEventListener('click', async () => { await sb.auth.signOut(); location.href='auth.html'; });
+</script>
+
 <main class="container reader">
   <aside class="toc">
-    <h3 style="margin:.3rem 0">Chapters</h3>
+    <h3>Chapters</h3>
     <div id="toc"></div>
   </aside>
   <section class="article">
@@ -24,90 +40,23 @@
       </div>
     </div>
     <article id="content"></article>
-    <p class="meta" id="meta"></p>
     <div class="article" style="margin-top:16px">
       <h3>Comments</h3>
       <div id="comments"></div>
-      <div id="commentForm"><textarea id="c_body" rows="3" placeholder="Write a comment…"></textarea> <button class="btn" id="c_submit">Post</button></div>
-      <p class="meta">Log in to comment.</p>
+      <div id="commentForm">
+        <textarea id="c_body" rows="3" placeholder="Write a comment…"></textarea>
+        <button class="btn" id="c_submit">Post</button>
+      </div>
+      <p class="meta">Comments and likes are per novel. Bookmarks/progress are per chapter.</p>
+    </div>
+    <div class="controls" style="margin-top:12px">
+      <a class="btn" id="prev">Prev</a>
+      <a class="btn" id="next">Next</a>
     </div>
   </section>
 </main>
-<script type="module">
-import { api } from './js/api.js';
-import { $, html, throttle, getParam } from './js/utils.js';
+<script type="module" src="js/reader.js"></script>
+<footer>© <span id="y"></span> NovelHub</footer>
+<script>document.getElementById('y').textContent = new Date().getFullYear();</script>
 
-let fontSize = Number(localStorage.getItem('fontSize') || 18);
-const applyFont=()=>{$('#content').style.fontSize = fontSize+'px'}; applyFont();
-$('#fontPlus').onclick=()=>{fontSize=Math.min(28,fontSize+1);localStorage.setItem('fontSize',fontSize);applyFont();};
-$('#fontMinus').onclick=()=>{fontSize=Math.max(14,fontSize-1);localStorage.setItem('fontSize',fontSize);applyFont();};
-
-const slug = getParam('novel'); let chIndex = Number(getParam('ch')||'1');
-const novel = await api.getNovelBySlug(slug); $('#novelTitle').textContent = novel.title;
-const chapters = await api.listChapters(novel.id || slug);
-const maxIndex = chapters.length ? chapters[chapters.length-1].index_in_novel : 1;
-
-function renderTOC(){
-  const toc = $('#toc'); toc.innerHTML='';
-  for (const c of chapters){
-    const a = document.createElement('a');
-    a.href = `reader.html?novel=${encodeURIComponent(slug)}&ch=${c.index_in_novel}`;
-    a.textContent = `${c.index_in_novel}. ${c.title}`;
-    if (c.index_in_novel===chIndex) a.classList.add('active');
-    toc.append(a);
-  }
-}
-renderTOC();
-function setNav(){ $('#prev').href = chIndex>1?`reader.html?novel=${encodeURIComponent(slug)}&ch=${chIndex-1}`:'#'; $('#next').href = chIndex<maxIndex?`reader.html?novel=${encodeURIComponent(slug)}&ch=${chIndex+1}`:'#'; }
-setNav();
-
-async function load(){
-  const chap = await api.getChapter(novel.id || slug, chIndex);
-  $('#chapterTitle').textContent = chap.title;
-  $('#content').innerHTML = chap.content;
-  $('#meta').textContent = `Chapter ${chap.index_in_novel} · ${new Date(chap.published_at).toLocaleDateString()}`;
-
-  // progress restore
-  const prog = await api.getProgress(novel.id);
-  if (prog?.last_chapter_index === chIndex && Number.isFinite(prog.last_scroll_pct)){
-    const h = document.documentElement;
-    const y = (prog.last_scroll_pct/100) * (h.scrollHeight - h.clientHeight);
-    scrollTo({top:y});
-  }
-
-  // likes / comments
-  const likes = await api.countLikes(chap.id); $('#like').textContent = `❤ ${likes}`;
-  const comments = await api.listComments(chap.id);
-  const wrap = $('#comments'); wrap.innerHTML='';
-  for (const c of comments){
-    wrap.append(html`<div class="comment"><div>${c.body}</div><div class="meta">${new Date(c.created_at).toLocaleString()}</div></div>`);
-  }
-
-  // autosave
-  const handler = throttle(async ()=>{
-    const h = document.documentElement;
-    const pct = h.scrollHeight<=h.clientHeight?100:Math.min(100,Math.round(100*h.scrollTop/(h.scrollHeight-h.clientHeight)));
-    await api.saveProgress(novel.id, chIndex, pct);
-  },800);
-  addEventListener('scroll', handler, {passive:true});
-  addEventListener('beforeunload', ()=>api.saveProgress(novel.id, chIndex, 100), {once:true});
-}
-await load();
-
-$('#bookmark').onclick = async ()=>{
-  const chapRow = (await api.getChapter(novel.id||slug, chIndex));
-  await api.toggleBookmark(chapRow.id);
-  alert('Toggled bookmark.');
-};
-$('#like').onclick = async ()=>{
-  const chapRow = (await api.getChapter(novel.id||slug, chIndex));
-  await api.toggleLike(chapRow.id);
-  location.reload();
-};
-$('#c_submit').onclick = async ()=>{
-  const body = $('#c_body').value.trim(); if(!body) return;
-  const chapRow = await api.getChapter(novel.id||slug, chIndex);
-  await api.addComment(chapRow.id, body); $('#c_body').value=''; location.reload();
-};
-</script>
 </body></html>

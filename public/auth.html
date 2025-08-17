@@ -1,40 +1,46 @@
 <!doctype html>
 <html><head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Auth · NovelHub Pro</title>
-<link rel="stylesheet" href="styles.css"/>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>NovelHub — Auth</title>
+  <link rel="stylesheet" href="styles.css"/>
 </head><body>
-<header class="nav container"><div class="brand"><div class="logo"></div><h1>Auth</h1></div><div class="actions"><a href="index.html">Home</a></div></header>
+
+<header class="nav container">
+  <div class="brand"><div class="logo"></div><h1>NovelHub</h1></div>
+  <nav class="actions">
+    <a href="index.html">Home</a>
+    <a href="profile.html">Profile</a>
+    <a href="admin.html">Admin</a>
+    <a href="auth.html" id="authLink">Log in</a>
+    <button id="logout" style="display:none">Log out</button>
+  </nav>
+</header>
+<script type="module">
+  import { sb } from './js/supabaseClient.js';
+  const authLink = document.getElementById('authLink');
+  const logout = document.getElementById('logout');
+  const sess = (await sb.auth.getSession()).data.session;
+  if (sess?.user) { authLink.style.display='none'; logout.style.display='inline-block'; }
+  logout?.addEventListener('click', async () => { await sb.auth.signOut(); location.href='auth.html'; });
+</script>
+
 <main class="container" style="max-width:560px">
-  <div class="article">
+  <div class="form">
     <h2>Sign up</h2>
     <input id="su_email" type="email" placeholder="you@example.com"><br><br>
     <input id="su_pass" type="password" placeholder="••••••••"><br><br>
     <button class="btn" id="signup">Create account</button>
-    <p class="meta">Check your email to confirm.</p>
+    <p class="meta">Check your email if confirmation is required.</p>
   </div>
-  <div class="article">
+  <div class="form">
     <h2>Log in</h2>
     <input id="li_email" type="email" placeholder="you@example.com"><br><br>
     <input id="li_pass" type="password" placeholder="••••••••"><br><br>
     <button class="btn" id="login">Log in</button>
   </div>
-  <p class="meta">In DEMO mode (no config.js), auth is disabled.</p>
 </main>
-<script type="module">
-import { sb, DEMO } from './js/supabaseClient.js';
-if (!DEMO){
-  document.getElementById('signup').onclick = async ()=>{
-    const { error } = await sb.auth.signUp({ email: su_email.value, password: su_pass.value });
-    alert(error? error.message : 'Check your email.');
-  };
-  document.getElementById('login').onclick = async ()=>{
-    const { error } = await sb.auth.signInWithPassword({ email: li_email.value, password: li_pass.value });
-    if (error) return alert(error.message); location.href='index.html';
-  };
-} else {
-  document.getElementById('signup').onclick = ()=>alert('Auth disabled in DEMO mode');
-  document.getElementById('login').onclick = ()=>alert('Auth disabled in DEMO mode');
-}
-</script>
+<script type="module" src="js/auth.js"></script>
+<footer>© <span id="y"></span> NovelHub</footer>
+<script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+
 </body></html>

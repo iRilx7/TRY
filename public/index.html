@@ -1,78 +1,54 @@
 <!doctype html>
 <html><head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>NovelHub Pro · Home</title>
-<link rel="stylesheet" href="styles.css"/>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>NovelHub — Home</title>
+  <link rel="stylesheet" href="styles.css"/>
 </head><body>
+
 <header class="nav container">
-  <div class="brand"><div class="logo"></div><h1>NovelHub Pro</h1></div>
-  <div class="actions">
+  <div class="brand"><div class="logo"></div><h1>NovelHub</h1></div>
+  <nav class="actions">
     <a href="index.html">Home</a>
-    <a href="explore.html">Explore</a>
-    <a href="profile.html" id="profileLink" style="display:none">Profile</a>
+    <a href="profile.html">Profile</a>
     <a href="admin.html">Admin</a>
     <a href="auth.html" id="authLink">Log in</a>
     <button id="logout" style="display:none">Log out</button>
-  </div>
+  </nav>
 </header>
+<script type="module">
+  import { sb } from './js/supabaseClient.js';
+  const authLink = document.getElementById('authLink');
+  const logout = document.getElementById('logout');
+  const sess = (await sb.auth.getSession()).data.session;
+  if (sess?.user) { authLink.style.display='none'; logout.style.display='inline-block'; }
+  logout?.addEventListener('click', async () => { await sb.auth.signOut(); location.href='auth.html'; });
+</script>
 
 <main class="container">
+  <div class="searchbar">
+    <input id="q" placeholder="Search by title or author"/>
+    <button id="searchBtn">Search</button>
+  </div>
+
   <section class="hero">
-    <div class="big">
-      <h2>Read smarter. Anywhere.</h2>
-      <p>Sync progress, bookmark favorites, and join the discussion.</p>
-      <div class="searchbar" style="margin-top:12px">
-        <input id="q" placeholder="Search novels..."/><button id="searchBtn">Search</button>
-      </div>
-      <div class="tags" id="tags"></div>
+    <div>
+      <h3>Latest Updates</h3>
+      <div class="grid" id="latest"></div>
     </div>
     <div>
-      <div class="section"><h3>Trending</h3></div>
-      <div class="grid" id="trending"></div>
+      <h3>Completed (auto-detected)</h3>
+      <p class="meta">Novels with 20+ chapters & no updates in 30 days.</p>
+      <div class="grid" id="completed"></div>
     </div>
   </section>
 
-  <div class="section"><h3>Latest updates</h3><a href="explore.html" class="tag">See all →</a></div>
-  <div class="grid" id="latest"></div>
+  <section class="section" style="margin-top:18px">
+    <h3>All Novels</h3>
+  </section>
+  <div class="grid" id="grid"></div>
 </main>
+<script type="module" src="js/index.js"></script>
+<footer>© <span id="y"></span> NovelHub</footer>
+<script>document.getElementById('y').textContent = new Date().getFullYear();</script>
 
-<footer>© <span id="y"></span> NovelHub Pro</footer>
-
-<script type="module">
-import { api } from './js/api.js';
-import { $, html } from './js/utils.js';
-
-document.getElementById('y').textContent = new Date().getFullYear();
-
-const session = await api.getSession();
-document.getElementById('authLink').style.display = session?.user ? 'none':'';
-document.getElementById('logout').style.display = session?.user ? '':'none';
-document.getElementById('profileLink').style.display = session?.user ? '':'';
-document.getElementById('logout').onclick = async ()=>{ await api.signOut(); location.reload(); };
-
-const novels = await api.listNovels();
-const tags = new Set(); novels.forEach(n => (n.tags||[]).forEach(t=>tags.add(t)));
-$('#tags').append(html`${[...tags].slice(0,9).map(t=>`<a class="tag" href="explore.html?tag=${encodeURIComponent(t)}">${t}</a>`).join('')}`);
-
-function card(n){
-  return html`<article class="card">
-    <img src="${n.cover_url||'https://picsum.photos/seed/'+encodeURIComponent(n.slug)+'/400/600'}" alt="${n.title} cover">
-    <div class="pad">
-      <span class="badge">${n.author||'Unknown'}</span>
-      <h3>${n.title}</h3>
-      <p class="meta">${(n.description||'').slice(0,120)}</p>
-      <p style="margin-top:8px"><a class="btn" href="reader.html?novel=${encodeURIComponent(n.slug)}&ch=1">Read →</a></p>
-    </div>
-  </article>`;
-}
-
-const latest = $('#latest'); novels.slice(0,8).forEach(n=>latest.append(card(n)));
-const trending = $('#trending'); novels.slice(0,6).forEach(n=>trending.append(card(n)));
-
-document.getElementById('searchBtn').onclick = ()=>{
-  const q = ($('#q').value||'').toLowerCase();
-  const list = novels.filter(n => (n.title||'').toLowerCase().includes(q) || (n.author||'').toLowerCase().includes(q));
-  latest.innerHTML=''; list.forEach(n=>latest.append(card(n)));
-};
-</script>
 </body></html>

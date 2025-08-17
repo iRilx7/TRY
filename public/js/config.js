@@ -1,3 +1,2 @@
-// Fill these with your Supabase project info
-export const SUPABASE_URL = "354b296c-1873-4abb-88b7-67b8b964874c";
-export const SUPABASE_ANON_KEY = "xlanx@gmail.com";
+export const SUPABASE_URL = "https://pfjbwjpgwscolqiqtyxt.supabase.co";
+export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmamJ3anBnd3Njb2xxaXF0eXh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0MTg5NDgsImV4cCI6MjA3MDk5NDk0OH0.D1H1O9E8pb_tzL4XXg_yC4yrbXwyuYwV5YEH-PXYVEo";
