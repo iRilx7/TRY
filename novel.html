@@ -1,4 +1,4 @@
-<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="styles.css"><title>Reader</title>
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="styles.css"><title>Novel</title>
 
 <header class="nav"><div class="wrap container">
   <div class="brand"><div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#79ffe1,#a0b3ff)"></div>
@@ -19,12 +19,17 @@ if (sess?.user) {{ document.getElementById('authLink').classList.add('hidden'); 
 document.getElementById('logout').onclick = async ()=>{{ await sb.auth.signOut(); location.href='auth.html'; }};
 </script>
 
-<main class="container" style="display:grid;grid-template-columns:260px 1fr;gap:16px">
-  <nav class="card" id="toc" style="max-height:70vh;overflow:auto"></nav>
-  <article class="card"><div style="display:flex;justify-content:space-between;align-items:center">
-    <div><span id="novelTitle" class="meta"></span> — <span id="chapterTitle"></span></div>
-    <div><button id="prev" class="btn">Prev</button><button id="next" class="btn">Next</button><button id="fontMinus" class="btn">A-</button><button id="fontPlus" class="btn">A+</button></div>
-  </div><div id="content" class="content"></div></article>
+<main class="container">
+  <section class="card"><div class="grid" style="grid-template-columns:260px 1fr;gap:12px">
+    <img id="cover" class="thumb"><div>
+      <div id="author" class="meta"></div>
+      <h1 id="title"></h1>
+      <p id="desc"></p>
+      <div class="meta" id="likes"></div>
+      <div style="display:flex;gap:8px"><a id="start" class="btn primary">Start reading</a><a id="continue" class="btn">Continue</a></div>
+    </div></div>
+  </section>
+  <section class="card"><h3>Chapters</h3><input id="filterCh" placeholder="Filter"><ul id="chapList" class="list"></ul></section>
 </main>
-<script type="module" src="js/reader.js"></script>
+<script type="module" src="js/novel.js"></script>
 <footer class='container' style='color:#9fb0c3;text-align:center;padding:20px'>© <span id='y'></span> NovelHub Ultra</footer><script>document.getElementById('y').textContent=new Date().getFullYear()</script>

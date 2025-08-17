@@ -1,4 +1,4 @@
 
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-export const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = createClient('https://pfjbwjpgwscolqiqtyxt.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmamJ3anBnd3Njb2xxaXF0eXh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0MTg5NDgsImV4cCI6MjA3MDk5NDk0OH0.D1H1O9E8pb_tzL4XXg_yC4yrbXwyuYwV5YEH-PXYVEo');
+export default sb;

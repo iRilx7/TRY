@@ -1,43 +1,7 @@
 
 import { $, html } from './utils.js';
-import { listNovels, latestUpdatedNovels, completedNovels, likeCount, trendingNovels } from './api.js';
-
-function card(n){
-  const img = n.cover_url || `https://picsum.photos/seed/${encodeURIComponent(n.slug)}/400/600`;
-  return html`<article class="card">
-    <img src="${img}" alt="${n.title}"/>
-    <div class="pad">
-      <span class="badge">${n.author||'Unknown'}</span>
-      <h3>${n.title}</h3>
-      <p class="meta">${(n.description||'').slice(0,120)}</p>
-      <p style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
-        <a class="btn" href="reader.html?novel=${encodeURIComponent(n.slug)}&ch=1">Read →</a>
-        <span class="meta" data-like="${n.id}">❤ …</span>
-      </p>
-    </div>
-  </article>`;
-}
-
-async function hydrateLikes(scope){
-  for (const el of scope.querySelectorAll('[data-like]')){
-    const id = Number(el.getAttribute('data-like'));
-    el.textContent = '❤ ' + await likeCount(id);
-  }
-}
-
-async function renderAll(){
-  const q = $('#q').value.trim();
-  const novels = await listNovels(q);
-  const grid = $('#grid'); grid.innerHTML=''; novels.forEach(n=>grid.append(card(n))); await hydrateLikes(grid);
-
-  const latest = await latestUpdatedNovels(8);
-  const latestEl = $('#latest'); latestEl.innerHTML=''; latest.forEach(n=>latestEl.append(card(n))); await hydrateLikes(latestEl);
-
-  const trending = await trendingNovels(8);
-  const trEl = $('#trending'); trEl.innerHTML=''; trending.forEach(n=>trEl.append(card(n))); await hydrateLikes(trEl);
-
-  const completed = await completedNovels(8);
-  const compEl = $('#completed'); compEl.innerHTML=''; completed.forEach(n=>compEl.append(card(n))); await hydrateLikes(compEl);
-}
-$('#searchBtn').addEventListener('click', renderAll);
-renderAll();
+import { listNovels, likeCount } from './api.js';
+function card(n){ const img=n.cover_url||`https://picsum.photos/seed/${encodeURIComponent(n.slug)}/400/600`; return html`<article class="card"><img class="thumb" src="${img}"><div class="pad"><div class="meta">${n.author||''}</div><h3>${n.title}</h3><p class="meta">${(n.description||'').slice(0,120)}</p><div style="display:flex;justify-content:space-between"><a class="btn" href="novel.html?id=${n.id}">Open</a><span class="meta" data-like="${n.id}">❤ …</span></div></div></article>`; }
+async function hydrate(scope){ for(const el of scope.querySelectorAll('[data-like]')) el.textContent='❤ '+await likeCount(Number(el.dataset.like)); }
+async function render(q){ const list=await listNovels(q); const a=$('#all'); a.innerHTML=''; list.forEach(n=>a.append(card(n))); const l=list.slice(0,8); const latest=$('#latest'); latest.innerHTML=''; l.forEach(n=>latest.append(card(n))); await hydrate(a); await hydrate(latest); }
+$('#searchBtn').onclick=()=>render($('#q').value.trim()); render();
