@@ -1,64 +1,66 @@
 
-<!doctype html><html><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NovelHub — Admin</title>
-<link rel="stylesheet" href="styles.css">
-<script src="https://unpkg.com/@supabase/supabase-js@2.44.4/dist/umd/supabase.js"></script>
-<script src="js/supabaseClient.js"></script><script src="js/common.js"></script>
-</head><body>
-<script>renderNav()</script>
-<div class="container">
-  <div id="gate" class="card"><h2>Checking admin access…</h2><p class="small">You must be logged in and present in <code>public.admins</code>.</p></div>
-
-  <div id="adminApp" class="grid" style="grid-template-columns:320px 1fr; display:none; gap:22px;">
-    <div class="card">
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>NovelHub — Admin</title>
+  <link rel="stylesheet" href="assets/css/styles.css"/>
+</head>
+<body>
+  <div class="container grid admin">
+    <section class="card list">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <h3>All Novels</h3><button class="btn ghost" id="newNovel">+ New</button>
+        <h3 style="margin:0">All Novels</h3>
+        <button class="btn" id="newNovel">+ New</button>
       </div>
-      <div class="n-list" id="novelList"></div>
-    </div>
+      <div id="novelList"></div>
+    </section>
 
-    <div class="grid" style="grid-template-columns:1fr 1fr; gap:22px;">
-      <div class="card">
-        <h2>Novel</h2>
-        <input type="hidden" id="nid">
-        <label>Title</label><input class="input" id="title">
-        <label>Author</label><input class="input" id="author">
-        <label>Genres</label>
-        <div class="genre-bank" id="genreBank"></div>
-        <label>Custom genres (comma separated)</label><input class="input" id="genresExtra" placeholder="add custom tags">
-        <label>Cover URL <span class="small">or upload below</span></label><input class="input" id="cover_url">
-        <label>Description</label><textarea class="input" id="description"></textarea>
-        <div class="grid" style="grid-template-columns:1fr auto;align-items:end;">
-          <div><label>Upload cover</label><input type="file" id="cover_file"><div class="small">Uploads to covers/ bucket</div></div>
-          <div><button class="btn" id="uploadBtn">Upload → Fill URL</button></div>
+    <section class="card form">
+      <h3 style="margin:0 0 12px 0">Novel</h3>
+      <div class="grid" style="grid-template-columns:1fr 1fr">
+        <div>
+          <label>Title</label>
+          <input id="title" class="input" placeholder="Title"/>
+          <label>Author</label>
+          <input id="author" class="input" placeholder="Author"/>
+          <label>Genres</label>
+          <div id="genreChips" class="chips"></div>
+          <label>Custom genres (comma separated)</label>
+          <input id="customGenres" class="input" placeholder="e.g. Noir, Slice of Life"/>
+          <label>Cover URL</label>
+          <input id="cover" class="input" placeholder="https://..."/>
+          <label>Description</label>
+          <textarea id="desc" rows="6"></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-accent" id="saveNovel">Save</button>
+            <button class="btn btn-danger" id="deleteNovel">Delete</button>
+          </div>
         </div>
-        <div class="center" style="margin-top:10px;">
-          <button class="btn ok" id="saveNovel">Save</button>
-          <button class="btn danger" id="deleteNovel">Delete</button>
-        </div>
-      </div>
 
-      <div class="card">
-        <h2>Chapters</h2>
-        <div class="grid" style="grid-template-columns:120px 1fr; gap:10px;">
-          <div><label>#</label><input class="input" id="c_num" value="1"></div>
-          <div><label>Title</label><input class="input" id="c_title"></div>
+        <div>
+          <h4 style="margin:0 0 8px 0">Chapters</h4>
+          <div style="display:flex;gap:8px">
+            <input id="chapNum" class="input" style="max-width:90px" value="1"/>
+            <input id="chapTitle" class="input" placeholder="Title"/>
+            <button class="btn btn-accent" id="createChap">Create</button>
+          </div>
+          <label style="margin-top:8px">Content (HTML allowed)</label>
+          <textarea id="chapContent" rows="10"><p>Chapter content...</p></textarea>
+          <div style="margin-top:8px">
+            <button class="btn" id="updateChap">Update</button>
+            <button class="btn btn-danger" id="deleteChap">Delete</button>
+          </div>
+          <div style="margin-top:12px">
+            <button class="btn" id="loadChaps">Load chapters</button>
+            <div id="chapTable" style="margin-top:8px"></div>
+          </div>
         </div>
-        <div class="grid" style="grid-template-columns:auto auto auto; gap:10px; margin-top:8px">
-          <button class="btn" id="suggestNext">Suggest next #</button>
-          <button class="btn ok" id="createCh">Create</button>
-          <button class="btn" id="updateCh">Update</button>
-          <button class="btn danger" id="deleteCh">Delete</button>
-        </div>
-        <label>Content (HTML allowed)</label><textarea class="input" id="c_content"><p>Chapter content…</p></textarea>
-        <div style="margin-top:12px"><button class="btn" id="loadList">Load chapters</button></div>
-        <table class="list" style="margin-top:8px"><thead><tr><th>#</th><th>Title</th><th>Created</th></tr></thead><tbody id="chTable"></tbody></table>
       </div>
-    </div>
+    </section>
   </div>
 
-  <div class="footer">© 2025 NovelHub · Admin</div>
-</div>
-<script src="js/admin.js"></script>
-</body></html>
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>
