@@ -1,8 +1,0 @@
-body { font-family: Arial, sans-serif; background: #111; color: #eee; margin:0; }
-header { display:flex; justify-content:space-between; align-items:center; background:#222; padding:1em; }
-header h1 { color:#6cf; }
-nav a { margin:0 0.5em; color:#eee; text-decoration:none; }
-.card { background:#1c1c1c; margin:1em; padding:1em; border-radius:8px; }
-input, textarea, button { display:block; margin:0.5em 0; padding:0.5em; width:100%; }
-button { background:#6cf; border:none; padding:0.7em; cursor:pointer; border-radius:4px; }
-#novelList { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1em; }
